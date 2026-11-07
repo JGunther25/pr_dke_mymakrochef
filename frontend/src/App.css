@@ -1,0 +1,422 @@
+
+.app {
+    min-height: 100vh;
+    background: #f6f8f7;
+    font-family: Arial, sans-serif;
+    color: #24332b;
+}
+
+.header {
+    background: white;
+    padding: 18px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5eae6;
+}
+
+.header h1 {
+    color: #16834a;
+    font-size: 26px;
+    margin: 0;
+}
+
+nav {
+    display: flex;
+    gap: 30px;
+    font-weight: bold;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    padding: 25px;
+    max-width: 1400px;
+    margin: auto;
+}
+
+.chat, .pantry {
+    background: white;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.04);
+}
+
+.chat {
+    min-height: 650px;
+    display: flex;
+    flex-direction: column;
+}
+
+h2 {
+    font-size: 19px;
+    margin-top: 0;
+}
+
+.messages {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.message {
+    padding: 13px 17px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    max-width: 75%;
+    line-height: 1.5;
+}
+
+.message.bot {
+    background: #f0f3f5;
+}
+
+.message.user {
+    background: #e0f2e8;
+    margin-left: auto;
+}
+
+.recipes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.recipe {
+    border: 1px solid #e6eae6;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+}
+
+.recipe h3 {
+    margin-top: 0;
+    color: #16834a;
+}
+
+.message-form {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+input {
+    padding: 13px;
+    border: 1px solid #d8dfda;
+    border-radius: 9px;
+    flex: 1;
+    min-width: 0;
+}
+
+button {
+    background: #087a3d;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 12px 17px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #056130;
+}
+
+.ingredient {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #edf0ed;
+    padding: 15px 0;
+}
+
+.ingredient small {
+    color: #78847c;
+}
+
+.pantry form {
+    display: flex;
+    gap: 8px;
+    margin-top: 25px;
+}
+
+@media (max-width: 800px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .recipes {
+        grid-template-columns: 1fr;
+    }
+
+    .header {
+        padding: 16px;
+    }
+}
+
+.pantry-subtitle {
+    color: #728078;
+    font-size: 13px;
+    margin: -6px 0 18px;
+}
+
+.ingredient-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.ingredient {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 0;
+    border-bottom: 1px solid #edf0ed;
+}
+
+.ingredient input[type="checkbox"] {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    accent-color: #087a3d;
+    cursor: pointer;
+}
+
+.ingredient > span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+}
+
+.ingredient-amount {
+    color: #78847c;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ingredient-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.icon-button {
+    background: transparent;
+    color: #65766b;
+    padding: 5px;
+    font-size: 18px;
+}
+
+.icon-button:hover {
+    background: #eef5f0;
+    color: #087a3d;
+}
+
+.delete-button:hover {
+    background: #fff0f0;
+    color: #c0392b;
+}
+
+.edit-amount {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.edit-amount input {
+    width: 58px;
+    padding: 6px;
+}
+
+.edit-amount small {
+    font-size: 11px;
+}
+
+.small-button {
+    padding: 6px 8px;
+}
+
+.add-heading {
+    margin: 25px 0 12px;
+    font-size: 14px;
+}
+
+.pantry form.pantry-form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 0;
+}
+
+.pantry-form input,
+.pantry-form select {
+    width: 100%;
+    min-width: 0;
+}
+
+.amount-row {
+    display: flex;
+    gap: 8px;
+}
+
+.amount-row input {
+    flex: 1;
+}
+
+.amount-row select {
+    flex: 0 0 85px;
+    padding: 10px;
+    border: 1px solid #d8dfda;
+    border-radius: 9px;
+    background: white;
+}
+
+.pantry-form button {
+    width: 100%;
+}
+
+@media (max-width: 420px) {
+    .ingredient {
+        flex-wrap: wrap;
+    }
+}
+
+.chat-entry {
+    margin-bottom: 20px;
+}
+
+.recipe {
+    background: #ffffff;
+    border: 1px solid #e0e9e3;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.recipe h3 {
+    color: #16834a;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.calories {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.macro-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.macro-values span {
+    background: #eaf5ee;
+    color: #19683e;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.recipe h4 {
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.recipe ul {
+    padding-left: 20px;
+    line-height: 1.8;
+}
+
+.missing {
+    background: #fff4df;
+    color: #88601c;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.recipe a {
+    color: #087a3d;
+    font-weight: bold;
+}
+
+.loading {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+/* Gesamte Oberfläche auf Bildschirmhöhe begrenzen */
+.app {
+    height: 100vh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Kopfzeile bleibt sichtbar */
+.header {
+    flex-shrink: 0;
+}
+
+/* Hauptbereich füllt den restlichen Bildschirm */
+.layout {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    align-items: stretch;
+}
+
+/* Chatfenster erhält eine feste verfügbare Höhe */
+.chat {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Nur Nachrichtenverlauf ist scrollbar */
+.messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 10px;
+    scroll-behavior: smooth;
+}
+
+/* Eingabefeld bleibt unten sichtbar */
+.message-form {
+    flex-shrink: 0;
+    padding-top: 15px;
+    background: white;
+}
+
+/* Vorratsverwaltung bleibt im Hauptbereich */
+.pantry {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Auf kleinen Bildschirmen weiterhin alles erreichbar */
+@media (max-width: 800px) {
+    .app {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+
+    .layout {
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    .chat {
+        height: 65vh;
+        min-height: 400px;
+    }
+
+    .pantry {
+        overflow: visible;
+    }
+}
