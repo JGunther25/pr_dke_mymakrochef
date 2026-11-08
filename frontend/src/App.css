@@ -327,6 +327,14 @@ button:hover {
     line-height: 1.8;
 }
 
+/* Zubereitungsschritte: etwas kleiner und heller als die Zutaten */
+.recipe .steps {
+    padding-left: 20px;
+    color: #65766b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 .missing {
     background: #fff4df;
     color: #88601c;

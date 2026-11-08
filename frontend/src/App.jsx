@@ -5,12 +5,12 @@ import { sendChatMessage } from './recipeService';
 
 
 const startIngredients = [
-    { id: 1, name: 'Reis', amount: 500, unit: 'g', selected: true },
-    { id: 2, name: 'Nudeln', amount: 250, unit: 'g', selected: false },
-    { id: 3, name: 'Haferflocken', amount: 400, unit: 'g', selected: false },
-    { id: 4, name: 'Eier', amount: 6, unit: 'Stück', selected: true },
-    { id: 5, name: 'Hähnchenbrust', amount: 400, unit: 'g', selected: true },
-    { id: 6, name: 'Paprika', amount: 3, unit: 'Stück', selected: true }
+    { id: 1, name: 'rice', amount: 500, unit: 'g', selected: true },
+    { id: 2, name: 'pasta', amount: 250, unit: 'g', selected: false },
+    { id: 3, name: 'oats', amount: 400, unit: 'g', selected: false },
+    { id: 4, name: 'eggs', amount: 6, unit: 'pcs', selected: true },
+    { id: 5, name: 'chicken breast', amount: 400, unit: 'g', selected: true },
+    { id: 6, name: 'bell pepper', amount: 3, unit: 'pcs', selected: true }
 ];
 
 function App() {
@@ -30,7 +30,7 @@ function App() {
 
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([
-        { sender: 'bot', text: 'Hallo! 👋 Was möchtest du heute kochen?' }
+        { sender: 'bot', text: 'Hi! 👋 What would you like to cook today?' }
     ]);
 
     //zeigt an ob gerade auf eine Antwort gewartet wird
@@ -158,7 +158,7 @@ function App() {
                 ...previous,
                 {
                     sender: 'bot',
-                    text: 'Entschuldigung, es ist ein Fehler aufgetreten.'
+                    text: 'Sorry, something went wrong.'
                 }
             ]);
         } finally {
@@ -175,13 +175,13 @@ function App() {
                 <h1>🥗 my makro chef</h1>
                 <nav>
                     <span>💬 Chat</span>
-                    <span>🧺 Vorrat</span>
+                    <span>🧺 Pantry</span>
                 </nav>
             </header>
 
             <main className="layout">
                 <section className="chat">
-                    <h2>Dein Ernährungsassistent</h2>
+                    <h2>Your nutrition assistant</h2>
 
 
                     <div className="messages">
@@ -198,25 +198,36 @@ function App() {
                                                 <h3>{recipe.name}</h3>
 
                                                 <p className="calories">
-                                                    {recipe.calories} kcal pro Portion
+                                                    {recipe.calories} kcal per serving
                                                 </p>
 
                                                 <div className="macro-values">
-                                                    <span> {recipe.protein} g Protein</span>
-                                                    <span> {recipe.carbs} g Kohlenhydrate</span>
-                                                    <span> {recipe.fat} g Fett</span>
+                                                    <span> {recipe.protein} g protein</span>
+                                                    <span> {recipe.carbs} g carbs</span>
+                                                    <span> {recipe.fat} g fat</span>
                                                 </div>
 
-                                                <h4>Zutaten</h4>
+                                                <h4>Ingredients</h4>
                                                 <ul>
                                                     {recipe.ingredients.map(ingredient => (
                                                         <li key={ingredient}>{ingredient}</li>
                                                     ))}
                                                 </ul>
 
+                                                {recipe.steps && recipe.steps.length > 0 && (
+                                                    <>
+                                                        <h4>Directions</h4>
+                                                        <ol className="steps">
+                                                            {recipe.steps.map((step, index) => (
+                                                                <li key={index}>{step}</li>
+                                                            ))}
+                                                        </ol>
+                                                    </>
+                                                )}
+
                                                 {recipe.missingIngredients.length > 0 && (
                                                     <p className="missing">
-                                                        Fehlende Zutaten: {' '}
+                                                        Missing ingredients: {' '}
                                                         {recipe.missingIngredients.join(', ')}
                                                     </p>
                                                 )}
@@ -227,7 +238,7 @@ function App() {
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                     >
-                                                        Originalrezept ansehen
+                                                        View original recipe
                                                     </a>
                                                 )}
                                             </article>
@@ -239,7 +250,7 @@ function App() {
 
                         {isLoading && (
                             <div className="message bot loading">
-                                ⏳ Rezeptvorschläge werden gesucht ...
+                                ⏳ Looking for recipes ...
                             </div>
                         )}
                         <div ref={messagesEndRef} />
@@ -249,16 +260,16 @@ function App() {
                         <input
                             value={message}
                             onChange={event => setMessage(event.target.value)}
-                            placeholder="Was möchtest du heute kochen?"
+                            placeholder="What would you like to cook today?"
                         />
-                        <button type="submit">Senden</button>
+                        <button type="submit">Send</button>
                     </form>
                 </section>
 
                 <aside className="pantry">
-                    <h2>🧺 Vorratsverwaltung</h2>
+                    <h2>🧺 Pantry</h2>
                     <p className="pantry-subtitle">
-                        {selectedCount} von {ingredients.length} Zutaten ausgewählt
+                        {selectedCount} of {ingredients.length} ingredients selected
                     </p>
 
                     <div className="ingredient-list">
@@ -268,7 +279,7 @@ function App() {
                                     type="checkbox"
                                     checked={item.selected}
                                     onChange={() => toggleIngredient(item.id)}
-                                    aria-label={`${item.name} auswählen`}
+                                    aria-label={`Select ${item.name}`}
                                 />
 
                                 <span className={item.selected ? 'ingredient-selected' : ''}>
@@ -283,7 +294,7 @@ function App() {
                                             step="any"
                                             value={item.amount}
                                             onChange={event => changeAmount(item.id, event.target.value)}
-                                            aria-label={`Menge von ${item.name}`}
+                                            aria-label={`Amount of ${item.name}`}
                                         />
                                         <small>{item.unit}</small>
                                         <button
@@ -307,8 +318,8 @@ function App() {
                                         onClick={() => setEditingId(
                                             editingId === item.id ? null : item.id
                                         )}
-                                        aria-label={`${item.name} bearbeiten`}
-                                        title="Menge bearbeiten"
+                                        aria-label={`Edit ${item.name}`}
+                                        title="Edit amount"
                                     >
                                         ✎
                                     </button>
@@ -316,8 +327,8 @@ function App() {
                                         type="button"
                                         className="icon-button delete-button"
                                         onClick={() => deleteIngredient(item.id)}
-                                        aria-label={`${item.name} löschen`}
-                                        title="Zutat löschen"
+                                        aria-label={`Delete ${item.name}`}
+                                        title="Delete ingredient"
                                     >
                                         ×
                                     </button>
@@ -326,11 +337,11 @@ function App() {
                         ))}
                     </div>
 
-                    <h3 className="add-heading">Weitere Zutat hinzufügen</h3>
+                    <h3 className="add-heading">Add another ingredient</h3>
 
                     <form className="pantry-form" onSubmit={addIngredient}>
                         <input
-                            placeholder="Lebensmittel, z. B. Tomaten"
+                            placeholder="Ingredient, e.g. tomatoes"
                             value={newName}
                             onChange={event => setNewName(event.target.value)}
                             required
@@ -341,7 +352,7 @@ function App() {
                                 type="number"
                                 min="0.01"
                                 step="any"
-                                placeholder="Menge"
+                                placeholder="Amount"
                                 value={newAmount}
                                 onChange={event => setNewAmount(event.target.value)}
                                 required
@@ -355,11 +366,11 @@ function App() {
                                 <option value="kg">kg</option>
                                 <option value="ml">ml</option>
                                 <option value="l">l</option>
-                                <option value="Stück">Stück</option>
+                                <option value="pcs">pcs</option>
                             </select>
                         </div>
 
-                        <button type="submit">+ Zutat hinzufügen</button>
+                        <button type="submit">+ Add ingredient</button>
                     </form>
                 </aside>
             </main>
