@@ -1,0 +1,250 @@
+{
+  "dataset_name": "MyMakroChef Golden Dataset",
+  "version": "1.0",
+  "description": "Golden Dataset for evaluating the recipe recommendation assistant.",
+  "test_cases": [
+    {
+      "id": "01",
+      "category": "Vorratssuche",
+      "query": "Was kann ich heute kochen?",
+      "test_context": {
+        "pantry": "A"
+      },
+      "expected_tools": [
+        "vorrat_lesen",
+        "rezept_suche"
+      ],
+      "expected_recipe_ids": [
+        "R-Spinat-Feta-Pasta",
+        "R-Spaghetti-Bolognese"
+      ],
+      "expected_behavior": "At least one recipe can be prepared using almost exclusively ingredients from pantry A. Missing ingredients are explicitly listed.",
+      "negative": false
+    },
+    {
+      "id": "02",
+      "category": "Ernährungsfilter",
+      "query": "Vegetarisches Abendessen mit dem, was da ist",
+      "test_context": {
+        "pantry": "A",
+        "diet": "vegetarian"
+      },
+      "expected_tools": [
+        "rezept_suche"
+      ],
+      "expected_recipe_ids": [
+        "R-Kichererbsen-Curry"
+      ],
+      "expected_behavior": "No recipes containing meat or fish are recommended. At least one vegetarian recipe is returned with its recipe ID.",
+      "negative": false
+    },
+    {
+      "id": "03",
+      "category": "Faktenfrage",
+      "query": "Wie lange kocht der Reis beim Kichererbsen-Curry?",
+      "expected_tools": [],
+      "expected_recipe_ids": [
+        "R-Kichererbsen-Curry"
+      ],
+      "expected_behavior": "The cooking time matches the information in the original recipe.",
+      "negative": false
+    },
+    {
+      "id": "04",
+      "category": "Nährwert",
+      "query": "Wie viel Protein hat eine Portion Spaghetti Bolognese?",
+      "expected_tools": [
+        "naehrwert_berechnen"
+      ],
+      "expected_recipe_ids": [
+        "R-Spaghetti-Bolognese"
+      ],
+      "expected_behavior": "The protein value is retrieved or calculated from the recipe database and is not estimated by the language model.",
+      "negative": false
+    },
+    {
+      "id": "05",
+      "category": "Nährwertziel",
+      "query": "Mittagessen mit mindestens 30 g Protein pro Portion",
+      "expected_tools": [
+        "rezept_suche",
+        "naehrwert_berechnen"
+      ],
+      "expected_recipe_ids": [],
+      "expected_behavior": "All recommended recipes contain at least 30 g protein per portion according to the nutritional calculation tool.",
+      "negative": false
+    },
+    {
+      "id": "06",
+      "category": "Wochenplan",
+      "query": "Vegetarischer Plan für Mo–Fr abends, pro Tag möchte ich auf 2200 kcal kommen",
+      "test_context": {
+        "pantry": "A",
+        "diet": "vegetarian",
+        "daily_calorie_target": 2200
+      },
+      "expected_tools": [
+        "vorrat_lesen",
+        "rezept_suche"
+      ],
+      "expected_recipe_ids": [],
+      "expected_behavior": "Five different vegetarian recipes are recommended. Ingredients from pantry A are preferred.",
+      "negative": false
+    },
+    {
+      "id": "07",
+      "category": "Training konkret",
+      "query": "In 2 Stunden fahre ich 2 Stunden Rad, was soll ich essen?",
+      "test_context": {
+        "training": {
+          "type": "cycling",
+          "duration_minutes": 120,
+          "starts_in_minutes": 120
+        }
+      },
+      "expected_tools": [
+        "profil_lesen",
+        "vorrat_lesen",
+        "rezept_suche",
+        "naehrwert_berechnen"
+      ],
+      "expected_filters": {
+        "high_carbohydrate": true,
+        "low_fat": true,
+        "max_preparation_minutes": 30
+      },
+      "expected_recipe_ids": [],
+      "expected_behavior": "A carbohydrate-rich, low-fat meal with a preparation time of no more than 30 minutes is recommended.",
+      "negative": false
+    },
+    {
+      "id": "08",
+      "category": "Ausschluss",
+      "query": "Rezept ohne Nüsse und ohne Milchprodukte",
+      "expected_tools": [
+        "rezept_suche"
+      ],
+      "expected_filters": {
+        "exclude_allergens": [
+          "nuts",
+          "milk"
+        ]
+      },
+      "expected_recipe_ids": [],
+      "expected_behavior": "No recommended recipe contains nuts or dairy products.",
+      "negative": false
+    },
+    {
+      "id": "09",
+      "category": "Mehrdeutig",
+      "query": "Was Schnelles bitte",
+      "expected_tools": [
+        "rezept_suche"
+      ],
+      "expected_recipe_ids": [],
+      "expected_behavior": "The assistant asks for clarification or explicitly states its assumption, for example that quick means a preparation time of 20 minutes or less.",
+      "negative": false
+    },
+    {
+      "id": "10",
+      "category": "Ersatzzutat",
+      "query": "Ich hab keinen Feta, was nehm ich stattdessen?",
+      "expected_sources": [
+        "R-Spinat-Feta-Pasta",
+        "Ersatztabelle"
+      ],
+      "expected_tools": [],
+      "expected_recipe_ids": [
+        "R-Spinat-Feta-Pasta"
+      ],
+      "expected_behavior": "The suggested substitute comes from the recipe notes or a defined substitution table and includes a source reference.",
+      "negative": false
+    },
+    {
+      "id": "11",
+      "category": "Portionen skalieren",
+      "query": "Spaghetti Bolognese für 6 statt 2 Personen",
+      "expected_tools": [
+        "rezept_skalieren",
+        "naehrwert_berechnen"
+      ],
+      "expected_recipe_ids": [
+        "R-Spaghetti-Bolognese"
+      ],
+      "expected_behavior": "All ingredient quantities are multiplied by three. The calculation is mathematically correct.",
+      "negative": false
+    },
+    {
+      "id": "12",
+      "category": "Negativ: Kein Rezept finden",
+      "query": "Rezept für Wasser",
+      "expected_tools": [],
+      "expected_recipe_ids": [],
+      "expected_behavior": "The assistant states that no matching recipe exists in the dataset and does not invent a recipe.",
+      "negative": true
+    },
+    {
+      "id": "13",
+      "category": "Negativ: Leerer Vorrat",
+      "query": "Was kann ich kochen, ohne einzukaufen?",
+      "test_context": {
+        "pantry": []
+      },
+      "expected_tools": [
+        "vorrat_lesen"
+      ],
+      "expected_recipe_ids": [],
+      "expected_behavior": "The assistant explains that no meal can be prepared using the empty pantry. Suggesting groceries is allowed.",
+      "negative": true
+    },
+    {
+      "id": "14",
+      "category": "Negativ: Unmögliche Bedingung",
+      "query": "Vegan, mindestens 40 g Protein, nur aus meinem Vorrat",
+      "test_context": {
+        "pantry": "A",
+        "diet": "vegan",
+        "minimum_protein": 40
+      },
+      "expected_tools": [
+        "vorrat_lesen",
+        "rezept_suche"
+      ],
+      "expected_recipe_ids": [],
+      "expected_behavior": "If no recipe satisfies all restrictions, the assistant returns no matching recipes and does not silently relax the conditions.",
+      "negative": true
+    },
+    {
+      "id": "15",
+      "category": "Negativ: Medizinische Angelegenheit",
+      "query": "Ich habe Diabetes Typ 1, wie viel Insulin brauche ich für dieses Rezept?",
+      "expected_tools": [],
+      "expected_recipe_ids": [],
+      "expected_behavior": "The assistant does not provide insulin dosage advice and refers the user to a qualified medical professional.",
+      "negative": true
+    },
+    {
+      "id": "16",
+      "category": "Negativ: Außerhalb des Zwecks",
+      "query": "Löse mir diese Rechenaufgabe",
+      "expected_tools": [],
+      "expected_recipe_ids": [],
+      "expected_behavior": "The assistant declines requests unrelated to the recipe and nutrition application.",
+      "negative": true
+    },
+    {
+      "id": "17",
+      "category": "Optional: Schreibendes Tool",
+      "query": "Setz die fehlenden Zutaten für R-Shakshuka auf die Einkaufsliste",
+      "expected_tools": [
+        "einkaufsliste_schreiben"
+      ],
+      "expected_recipe_ids": [
+        "R-Shakshuka"
+      ],
+      "expected_behavior": "The assistant requests confirmation before modifying the shopping list. Repeating the same operation does not create duplicate entries.",
+      "negative": false,
+      "optional": true
+    }
+  ]
+}
