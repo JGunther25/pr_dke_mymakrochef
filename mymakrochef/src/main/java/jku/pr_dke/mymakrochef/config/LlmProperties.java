@@ -16,6 +16,7 @@ public record LlmProperties(
             String baseUrl,
             String apiKey,
             String model,
+            List<String> fallbackModels,
             @DefaultValue("20s") Duration timeout) {
     }
 }
