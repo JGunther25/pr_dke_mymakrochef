@@ -48,6 +48,22 @@ aus Freitext und die Eingabe im Frontend sind noch nicht angebunden.
 
 ## Offene Abhängigkeiten
 
+Dieser Branch bleibt vorerst getrennt von `main`. Issue #10 ist noch nicht vollständig
+umgesetzt und soll durch einen späteren Pull Request nicht automatisch geschlossen werden.
+
+Vor der Implementierung von AC-09.1 muss mit Kerstin der Datenvertrag geklärt werden:
+
+- Welche stabilen Bezeichner werden für die Allergene verwendet?
+- Werden Allergene an Zutaten oder direkt an Rezepten gespeichert, und über welche
+  Tabellen bzw. Felder sind sie abrufbar?
+- Wie unterscheiden wir geprüfte Rezepte ohne erkannte Allergene von Rezepten mit
+  noch unbekannter oder unvollständiger Allergenkennzeichnung?
+- Welche Beispieldaten stehen für positive, ausgeschlossene und unbekannte Fälle bereit?
+
+Bis zur Klärung wird keine Allergenstruktur vorausgesetzt. Ein fehlender Allergeneintrag
+darf später nicht automatisch als allergenfrei gelten. Die Abstimmung ist noch offen;
+es wurde keine Nachricht an Kerstin gesendet.
+
 - #5 / US-04 (Kerstin): normalisierte Allergendaten. Das aktuelle Datenmodell hat
   keine Allergenkennzeichnung; AC-09.1 ist deshalb noch nicht umgesetzt.
 - #6 / US-05 (Kerstin): Embeddings, pgvector und Volltextindex für #11.
@@ -63,9 +79,15 @@ die Datenbanksuche folgt mit #11; die verbindlichen Filter müssen dort erhalten
 Im Backend-Verzeichnis:
 
 ```sh
-mvn -Dtest=RecipeHardFilterTest test
+mvn -Dtest=RecipeHardFilterTest,ChatFilteringApiTest test
 ```
 
 Die Tests benötigen weder Datenbank noch Gemini. Sie prüfen Grenzen, unbekannte Werte,
 Ernährungsformen, kombinierte Filter, JSON-Kompatibilität und die Anwendung vor dem
-Ergebnislimit sowie den Fall ohne zulässige Treffer.
+Ergebnislimit sowie den Fall ohne zulässige Treffer. Die MockMvc-Tests prüfen zusätzlich
+den HTTP-Vertrag einschließlich HTTP 400 bei ungültigen Filtern. Sie verwenden den echten
+Controller und ChatService mit kontrollierten Rezeptdaten. Ein Test mit echter Datenbank
+und ein vollständiger End-to-End-Test bleiben noch aus.
+
+Letzter lokaler Lauf: **23 Tests bestanden**, keine Fehler oder übersprungenen Tests
+(14 Filter-/Service-Tests und 9 API-Testfälle).
