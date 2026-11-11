@@ -6,6 +6,8 @@ import jku.pr_dke.mymakrochef.chat.ChatController.PantryItem;
 import jku.pr_dke.mymakrochef.chat.ChatController.RecipeCard;
 import jku.pr_dke.mymakrochef.chat.ChatTrace.RecipeHit;
 import jku.pr_dke.mymakrochef.recipe.Recipe;
+import jku.pr_dke.mymakrochef.recipe.RecipeFilters;
+import jku.pr_dke.mymakrochef.recipe.RecipeHardFilter;
 import jku.pr_dke.mymakrochef.recipe.RecipeIngredient;
 import jku.pr_dke.mymakrochef.recipe.RecipeRepository;
 import jku.pr_dke.mymakrochef.recipe.RecipeStep;
@@ -82,7 +84,7 @@ public class ChatService {
         Set<String> searchWords = new LinkedHashSet<>(pantryWords);
         searchWords.addAll(messageWords(request.message()));
 
-        List<Recipe> recipes = findRecipes(searchWords);
+        List<Recipe> recipes = findRecipes(searchWords, request.filters());
         List<RecipeHit> hits = recipes.stream()
                 .map(recipe -> new RecipeHit(recipe.getId(), recipe.getName(), score(recipe, searchWords)))
                 .toList();
@@ -138,11 +140,12 @@ public class ChatService {
      * und liefert die besten Rezepte mit mindestens einem Punkt.
      * Für die 20 Testrezepte werden alle Rezepte geladen; für viele Rezepte gehört die Suche in die Datenbank.
      */
-    private List<Recipe> findRecipes(Set<String> searchWords) {
+    private List<Recipe> findRecipes(Set<String> searchWords, RecipeFilters filters) {
         if (searchWords.isEmpty()) {
             return List.of();
         }
         return recipeRepository.findAll().stream()
+                .filter(recipe -> RecipeHardFilter.matches(recipe, filters))
                 .filter(recipe -> score(recipe, searchWords) > 0)
                 .sorted(Comparator.comparingInt((Recipe recipe) -> score(recipe, searchWords)).reversed())
                 .limit(MAX_RECIPES)

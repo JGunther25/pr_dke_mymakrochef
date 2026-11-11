@@ -1,6 +1,7 @@
 package jku.pr_dke.mymakrochef.chat;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jku.pr_dke.mymakrochef.recipe.RecipeFilters;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,9 +32,13 @@ public class ChatController {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PantryItem(String name, Double amount, String unit, boolean selected) {}
 
-    /** Was das Frontend schickt: die Nachricht und den ganzen Vorrat. */
+    /** Nachricht, Vorrat und optionale strukturierte Suchgrenzen. */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record ChatRequest(String message, List<PantryItem> pantry) {}
+    public record ChatRequest(String message, List<PantryItem> pantry, RecipeFilters filters) {
+        public ChatRequest(String message, List<PantryItem> pantry) {
+            this(message, pantry, null);
+        }
+    }
 
     /** Eine Rezeptkarte, so wie das Frontend sie anzeigt. */
     public record RecipeCard(Long id, String name, Double calories, Double protein, Double carbs, Double fat,
