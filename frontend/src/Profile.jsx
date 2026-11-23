@@ -25,6 +25,13 @@ const GOALS = [
     { field: 'fat', label: 'Fat', unit: 'g' }
 ];
 
+// Ernährungsformen als Auswahl-Buttons, ausgewählt = grün
+const DIETS = [
+    { value: 'none', label: 'No restriction' },
+    { value: 'vegetarian', label: 'Vegetarian' },
+    { value: 'vegan', label: 'Vegan' }
+];
+
 // Zeigt das Profil an und meldet jede Änderung über onChange an App.jsx
 function Profile({ profile, onChange }) {
 
@@ -52,7 +59,6 @@ function Profile({ profile, onChange }) {
 
     return (
         <div className="profile">
-            <p className="pantry-subtitle">Saved in this browser</p>
 
             <h3 className="add-heading">Daily goals</h3>
             <div className="goal-list">
@@ -73,15 +79,20 @@ function Profile({ profile, onChange }) {
             </div>
 
             <h3 className="add-heading">Diet</h3>
-            <select
-                className="diet-select"
-                value={profile.diet}
-                onChange={event => changeField('diet', event.target.value)}
-            >
-                <option value="none">No restriction</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="vegan">Vegan</option>
-            </select>
+            <div className="diet-options" role="radiogroup" aria-label="Diet">
+                {DIETS.map(diet => (
+                    <button
+                        type="button"
+                        key={diet.value}
+                        role="radio"
+                        aria-checked={profile.diet === diet.value}
+                        className={profile.diet === diet.value ? 'active' : ''}
+                        onClick={() => changeField('diet', diet.value)}
+                    >
+                        {diet.label}
+                    </button>
+                ))}
+            </div>
 
             <h3 className="add-heading">Allergies</h3>
             <div className="allergy-list">

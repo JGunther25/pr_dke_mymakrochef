@@ -153,12 +153,6 @@ button:hover {
     }
 }
 
-.pantry-subtitle {
-    color: #728078;
-    font-size: 13px;
-    margin: -6px 0 18px;
-}
-
 .ingredient-list {
     display: flex;
     flex-direction: column;
@@ -452,15 +446,53 @@ button:hover {
     color: #78847c;
 }
 
-.diet-select {
-    width: 100%;
-    padding: 13px;
-    font-size: 15px;
-    font-family: inherit;
-    color: inherit;
-    border: 1px solid #d8dfda;
-    border-radius: 9px;
+.diet-options {
+    display: flex;
+    gap: 6px;
+}
+
+/* das Profil misst seine eigene Breite, damit die Diät-Buttons darauf reagieren können */
+.profile {
+    container-type: inline-size;
+}
+
+/* zu schmal für drei Buttons nebeneinander: untereinander */
+@container (max-width: 330px) {
+    .diet-options {
+        flex-direction: column;
+    }
+
+    /* Pfeile in den Zahlenfeldern ausblenden, damit die Zahl Platz hat */
+    .goal input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+        padding: 10px;
+    }
+
+    .goal input[type="number"]::-webkit-outer-spin-button,
+    .goal input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+}
+
+.diet-options button {
+    flex: 1;
+    padding: 10px 6px;
     background: white;
+    color: #24332b;
+    border: 1px solid #d8dfda;
+    font-size: 14px;
+}
+
+.diet-options button:hover {
+    background: #eef3ef;
+}
+
+.diet-options button.active {
+    background: #087a3d;
+    border-color: #087a3d;
+    color: white;
 }
 
 .allergy-list {
@@ -649,11 +681,6 @@ form.staple-form {
     padding: 6px 12px;
 }
 
-/* Untertitel in den Spalten nicht nach oben schieben, sonst wird er abgeschnitten */
-.panel-body .pantry-subtitle {
-    margin-top: 0;
-}
-
 .panel-heading {
     margin-bottom: 8px;
 }
@@ -742,6 +769,69 @@ body.resizing-rows .height-handle {
 body.resizing-rows {
     cursor: row-resize;
     user-select: none;
+}
+
+/* Icons neben den Überschriften und in den Schaltern oben */
+.nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.panel-heading h2,
+.chat h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-strip .mmc-icon {
+    width: 42px;
+    height: 42px;
+}
+
+/* Nachricht mit Avatar: Bot links (Brokkoli), Nutzer rechts (Koch) */
+.message-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.message-row .message {
+    margin-bottom: 0;
+}
+
+.chat-entry.user .message-row {
+    flex-direction: row-reverse;
+}
+
+.chat-entry.user .message.user {
+    margin-left: 0;
+}
+
+.avatar {
+    flex: none;
+    display: inline-flex;
+}
+
+/* Brokkoli denkt in der Mitte des Chats */
+.thinking {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 0 10px;
+    color: #728078;
+    font-size: 13px;
+}
+
+.thinking p {
+    margin: 8px 0 0;
+}
+
+/* Logo-Text etwas größer */
+.header h1 .logo {
+    font-size: 30px;
 }
 
 /* kleine Bildschirme: alles untereinander, kein Ziehen */

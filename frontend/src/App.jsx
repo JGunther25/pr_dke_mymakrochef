@@ -4,6 +4,13 @@ import './App.css';
 import { sendChatMessage } from './recipeService';
 import Profile from './Profile';
 import SidePanel from './SidePanel';
+import Logo from './icons/Logo';
+import ChatIcon from './icons/ChatIcon';
+import PantryIcon from './icons/PantryIcon';
+import ProfileIcon from './icons/ProfileIcon';
+import HomeIcon from './icons/HomeIcon';
+import BroccoliIcon from './icons/BroccoliIcon';
+import './icons/icons.css';
 
 
 const startIngredients = [
@@ -38,9 +45,9 @@ const startLayout = {
 
 // Schalter oben in der Kopfzeile: blenden eine Spalte ganz aus und wieder ein
 const NAV_ITEMS = [
-    { name: 'chat', label: '💬 Chat' },
-    { name: 'pantry', label: '🧺 Pantry' },
-    { name: 'profile', label: '👤 Profile' }
+    { name: 'chat', label: 'Chat', Icon: ChatIcon },
+    { name: 'pantry', label: 'Pantry', Icon: PantryIcon },
+    { name: 'profile', label: 'Profile', Icon: ProfileIcon }
 ];
 
 // liest einen Wert aus dem localStorage, sonst den Startwert
@@ -103,7 +110,23 @@ function App() {
     //zeigt an ob gerade auf eine Antwort gewartet wird
     const [isLoading, setIsLoading] = useState(false);
 
+    // Brokkoli in der Mitte: 'thinking' beim Warten, 'wink' kurz bevor die Antwort erscheint
+    const [broccoliMode, setBroccoliMode] = useState('thinking');
+
     const messagesEndRef = useRef(null);
+
+    // true, solange der Nutzer gerade tippt (für die Punkte im Chat-Icon)
+    const [isTyping, setIsTyping] = useState(false);
+    const typingTimerRef = useRef(null);
+
+    function changeMessage(value) {
+        setMessage(value);
+        setIsTyping(true);
+
+        // 1,2 Sekunden nach dem letzten Tastendruck gilt man nicht mehr als tippend
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setIsTyping(false), 1200);
+    }
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({
@@ -280,6 +303,8 @@ function App() {
         ]);
 
         setMessage('');
+        setIsTyping(false);
+        clearTimeout(typingTimerRef.current);
         setIsLoading(true);
 
         try {
@@ -295,6 +320,10 @@ function App() {
                 userMessage,
                 [...ingredients, ...stapleItems]
             );
+
+            // Brokkoli zwinkert kurz, dann erscheint die Antwort
+            setBroccoliMode('wink');
+            await new Promise(resolve => setTimeout(resolve, 700));
 
             setMessages(previous => [
                 ...previous,
@@ -314,11 +343,11 @@ function App() {
             ]);
         } finally {
             setIsLoading(false);
+            setBroccoliMode('thinking');
         }
     }
 
 
-    const selectedCount = ingredients.filter(item => item.selected).length;
 
     // Inhalt vom Fenster "Always at home" unter der Pantry
     const staplesContent = (
@@ -352,9 +381,9 @@ function App() {
     );
 
     return (
-        <div className="app">
+        <div className={`app ${isTyping ? 'is-typing' : ''}`}>
             <header className="header">
-                <h1>🥗 my makro chef</h1>
+                <h1><Logo /></h1>
                 <nav>
                     {NAV_ITEMS.map(item => (
                         <button
@@ -365,7 +394,7 @@ function App() {
                             aria-pressed={!layout.hidden[item.name]}
                             title={layout.hidden[item.name] ? 'Show' : 'Hide'}
                         >
-                            {item.label}
+                            <item.Icon size={34} /> {item.label}
                         </button>
                     ))}
                 </nav>
@@ -379,9 +408,16 @@ function App() {
 
                         <div className="messages">
                             {messages.map((item, index) => (
-                                <div key={index} className="chat-entry">
-                                    <div className={`message ${item.sender}`}>
-                                        {item.text}
+                                <div key={index} className={`chat-entry ${item.sender}`}>
+                                    <div className="message-row">
+                                        <span className="avatar">
+                                            {item.sender === 'bot'
+                                                ? <BroccoliIcon size={36} />
+                                                : <ProfileIcon size={36} />}
+                                        </span>
+                                        <div className={`message ${item.sender}`}>
+                                            {item.text}
+                                        </div>
                                     </div>
 
                                     {item.recipes && item.recipes.length > 0 && (
@@ -442,8 +478,9 @@ function App() {
                             ))}
 
                             {isLoading && (
-                                <div className="message bot loading">
-                                    ⏳ Looking for recipes ...
+                                <div className="thinking">
+                                    <BroccoliIcon size={110} mode={broccoliMode} />
+                                    <p>Looking for recipes …</p>
                                 </div>
                             )}
                             <div ref={messagesEndRef} />
@@ -452,7 +489,7 @@ function App() {
                         <form className="message-form" onSubmit={sendMessage}>
                             <input
                                 value={message}
-                                onChange={event => setMessage(event.target.value)}
+                                onChange={event => changeMessage(event.target.value)}
                                 placeholder="What would you like to cook today?"
                             />
                             <button type="submit">Send</button>
@@ -462,7 +499,7 @@ function App() {
 
                 {!layout.hidden.pantry && (
                     <SidePanel
-                        icon="🧺"
+                        icon={<PantryIcon size={48} />}
                         title="Pantry"
                         className="pantry"
                         width={layout.pantry.width}
@@ -470,7 +507,7 @@ function App() {
                         onToggle={() => togglePanel('pantry')}
                         onResize={width => resizePanel('pantry', width)}
                         bottom={{
-                            icon: '🧂',
+                            icon: <HomeIcon size={44} />,
                             title: `Always at home (${staples.length})`,
                             height: layout.staples.height,
                             collapsed: layout.staples.collapsed,
@@ -479,9 +516,6 @@ function App() {
                             content: staplesContent
                         }}
                     >
-                        <p className="pantry-subtitle">
-                            {selectedCount} of {ingredients.length} ingredients selected
-                        </p>
 
                         <div className="ingredient-list">
                             {ingredients.map(item => (
@@ -596,7 +630,7 @@ function App() {
 
                 {!layout.hidden.profile && (
                     <SidePanel
-                        icon="👤"
+                        icon={<ProfileIcon size={48} />}
                         title="Profile"
                         width={layout.profile.width}
                         collapsed={layout.profile.collapsed}

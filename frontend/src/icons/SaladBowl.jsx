@@ -1,0 +1,47 @@
+
+// Salatschüssel von oben, mit Mund (withMouth) für die Logo-Animation
+function SaladBowl({ size = 40, withMouth = false }) {
+    return (
+        <svg
+            className="mmc-icon mmc-salad"
+            width={size}
+            height={size}
+            viewBox="-37 -37 76 76"
+            aria-hidden="true"
+        >
+            <circle cx="1.5" cy="2.5" r="35" fill="#dfe6e2"/>
+            <circle r="34" fill="#4aa3c7"/>
+            <path d="M-27 -18 A32.5 32.5 0 0 1 8 -32" fill="none" stroke="#8fd0f0" strokeWidth="2.5" strokeLinecap="round"/>
+            <g fill="#7cc3e3"><circle cx="31.7" cy="0" r="1.1"/><circle cx="27.5" cy="15.9" r="1.1"/><circle cx="15.9" cy="27.5" r="1.1"/><circle cx="0" cy="31.7" r="1.1"/><circle cx="-15.9" cy="27.5" r="1.1"/><circle cx="-27.5" cy="15.9" r="1.1"/><circle cx="-31.7" cy="0" r="1.1"/><circle cx="-27.5" cy="-15.9" r="1.1"/><circle cx="-15.9" cy="-27.5" r="1.1"/><circle cx="0" cy="-31.7" r="1.1"/><circle cx="15.9" cy="-27.5" r="1.1"/><circle cx="27.5" cy="-15.9" r="1.1"/></g>
+            <circle r="29.5" fill="#3b8db0"/>
+            <circle r="28" fill="#2a6f8e"/>
+            <circle r="27" fill="#358a31"/>
+            <g fill="#4caa43"><circle cx="20" cy="0" r="7.5"/><circle cx="10" cy="17.3" r="7.5"/><circle cx="-10" cy="17.3" r="7.5"/><circle cx="-20" cy="0" r="7.5"/><circle cx="-10" cy="-17.3" r="7.5"/><circle cx="10" cy="-17.3" r="7.5"/></g>
+            <g fill="#5bb84f"><circle cx="17.3" cy="10" r="7.5"/><circle cx="0" cy="20" r="7.5"/><circle cx="-17.3" cy="10" r="7.5"/><circle cx="-17.3" cy="-10" r="7.5"/><circle cx="0" cy="-20" r="7.5"/><circle cx="17.3" cy="-10" r="7.5"/></g>
+            <g fill="#3f9b3a"><circle cx="10" cy="0" r="6.5"/><circle cx="-5" cy="8.7" r="6.5"/><circle cx="-5" cy="-8.7" r="6.5"/></g>
+            <g fill="#4caa43"><circle cx="5" cy="8.7" r="6.5"/><circle cx="-10" cy="0" r="6.5"/><circle cx="5" cy="-8.7" r="6.5"/><circle r="5.5"/></g>
+            <g fill="#7fcf6e"><circle cx="15.5" cy="8" r="2.6"/><circle cx="-2" cy="18" r="2.6"/><circle cx="-19" cy="8" r="2.6"/><circle cx="-19" cy="-12" r="2.6"/><circle cx="-2" cy="-22" r="2.6"/><circle cx="15.5" cy="-12" r="2.6"/><circle cx="-7" cy="-11" r="2"/><circle cx="3" cy="6" r="2"/></g>
+            <g transform="translate(-13 -10) rotate(-20)"><ellipse rx="6.5" ry="4.8" fill="#fdfaf2"/><ellipse rx="6.5" ry="4.8" fill="none" stroke="#e8e0cc" strokeWidth=".8"/><circle cx=".5" r="3" fill="#f7c948"/><circle cx="-.6" cy="-1" r="1" fill="#fbe08a"/></g>
+            <g transform="translate(5 15) rotate(30)"><ellipse rx="6.5" ry="4.8" fill="#fdfaf2"/><ellipse rx="6.5" ry="4.8" fill="none" stroke="#e8e0cc" strokeWidth=".8"/><circle cx=".5" r="3" fill="#f7c948"/><circle cx="-.6" cy="-1" r="1" fill="#fbe08a"/></g>
+            <path d="M-8 -24 Q2 -26 6 -18 Q0 -21 -6 -19 Z" fill="#c5e384" stroke="#4a7a2c" strokeWidth="1.2" strokeLinejoin="round"/>
+            <path d="M-24 -4 Q-25 6 -18 9 Q-21 3 -20 -3 Z" fill="#c5e384" stroke="#4a7a2c" strokeWidth="1.2" strokeLinejoin="round"/>
+            <g transform="translate(10 -12)"><circle r="5.2" fill="#d64431"/><circle r="4" fill="#f07a63"/><path d="M0 -3 V3 M-2.6 -1.5 L2.6 1.5 M-2.6 1.5 L2.6 -1.5" stroke="#e5533d" strokeWidth="1"/><g fill="#f7d04a"><circle cx="-1.6" cy="-1.8" r=".6"/><circle cx="1.8" cy="-1.4" r=".6"/><circle cx="0" cy="2.2" r=".6"/></g><circle cx="-2" cy="-2.6" r="1" fill="#ffffff" opacity=".7"/></g>
+            <g transform="translate(-15 12)"><circle r="5.2" fill="#d64431"/><circle r="4" fill="#f07a63"/><path d="M0 -3 V3 M-2.6 -1.5 L2.6 1.5 M-2.6 1.5 L2.6 -1.5" stroke="#e5533d" strokeWidth="1"/><g fill="#f7d04a"><circle cx="-1.6" cy="-1.8" r=".6"/><circle cx="1.8" cy="-1.4" r=".6"/><circle cx="0" cy="2.2" r=".6"/></g><circle cx="-2" cy="-2.6" r="1" fill="#ffffff" opacity=".7"/></g>
+            <g transform="translate(17 8)"><circle r="4.6" fill="#d64431"/><circle cx="-1.5" cy="-1.5" r="1.2" fill="#f49a87"/></g>
+            <g transform="translate(-2 2)"><circle r="5" fill="#2f7f2c"/><circle r="4" fill="#d9f0c0"/><circle r="2" fill="#b6e08f"/><g fill="#9ccc72"><circle cx="-1" cy="-.6" r=".5"/><circle cx="1" cy="-.6" r=".5"/><circle cy="1.1" r=".5"/></g></g>
+            <g transform="translate(-7 21)"><circle r="4.5" fill="#2f7f2c"/><circle r="3.6" fill="#d9f0c0"/><circle r="1.8" fill="#b6e08f"/></g>
+            <g transform="translate(19 -4)"><circle r="4" fill="#e05a8a"/><circle r="3.2" fill="#fdf2f6"/><circle r="1.2" fill="#f7c6d8"/></g>
+            <circle cx="8" cy="0" r="3.8" fill="none" stroke="#a569bd" strokeWidth="1.5"/>
+            <circle cx="-20" cy="-13" r="3" fill="none" stroke="#a569bd" strokeWidth="1.3"/>
+            <g fill="#e0b062"><rect x="-6" y="-8" width="5.5" height="5" rx="1.5" transform="rotate(12 -3 -5.5)"/><rect x="11" y="18" width="5" height="4.5" rx="1.4" transform="rotate(-15 13.5 20)"/><rect x="-22" y="13" width="4.6" height="4.4" rx="1.4"/></g>
+            <g fill="#c08a3e"><rect x="-6" y="-4.5" width="5.5" height="1.5" rx=".7" transform="rotate(12 -3 -5.5)"/><rect x="11" y="21" width="5" height="1.4" rx=".7" transform="rotate(-15 13.5 20)"/></g>
+            <path d="M-20 -6 Q-12 -14 -4 -12 T12 -18 M-14 4 Q-6 0 2 8 T18 14" fill="none" stroke="#fff4d6" strokeWidth="1.4" strokeLinecap="round" opacity=".95"/>
+            <g fill="#1f5e22"><circle cx="-10" cy="5" r=".8"/><circle cx="3" cy="-14" r=".8"/><circle cx="13" cy="4" r=".8"/><circle cx="-4" cy="12" r=".8"/><circle cx="-16" cy="-5" r=".8"/></g>
+            {withMouth && (
+                <g className="mmc-mouth"><path d="M0 0 L42 -27 L42 27 Z" fill="#ffffff"/><path d="M31 -20 L0 0 L31 20" fill="none" stroke="#2a6f8e" strokeWidth="1.4" strokeLinejoin="round"/></g>
+            )}
+        </svg>
+    );
+}
+
+export default SaladBowl;
