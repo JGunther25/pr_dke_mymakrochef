@@ -428,3 +428,355 @@ button:hover {
         overflow: visible;
     }
 }
+
+/* Profil */
+.goal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.goal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.goal span {
+    flex: 0 0 70px;
+    font-size: 14px;
+}
+
+.goal small {
+    flex: 0 0 32px;
+    color: #78847c;
+}
+
+.diet-select {
+    width: 100%;
+    padding: 13px;
+    font-size: 15px;
+    font-family: inherit;
+    color: inherit;
+    border: 1px solid #d8dfda;
+    border-radius: 9px;
+    background: white;
+}
+
+.allergy-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.allergy {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.allergy input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    accent-color: #087a3d;
+}
+
+.allergy-note {
+    margin-top: 18px;
+    color: #728078;
+    font-size: 12px;
+}
+
+/* Drei Spalten nebeneinander: Chat | Pantry | Profile */
+.layout {
+    display: flex;
+    max-width: none;
+}
+
+.chat {
+    flex: 1;
+    min-width: 360px;
+}
+
+.side-column {
+    position: relative;
+    flex: 0 1 auto;
+    min-width: 220px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.side-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.04);
+}
+
+.panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* klickbare Überschrift zum Zuklappen */
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    margin-bottom: 14px;
+    background: none;
+    color: inherit;
+    text-align: left;
+}
+
+.panel-heading:hover {
+    background: none;
+    color: #087a3d;
+}
+
+.panel-heading h2 {
+    margin: 0;
+}
+
+.panel-arrow {
+    font-size: 20px;
+    color: #78847c;
+}
+
+/* zugeklappte Spalte: schmaler Streifen */
+.side-panel.collapsed {
+    flex: 0 0 48px;
+    width: 48px;
+    padding: 0;
+}
+
+.panel-strip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 0;
+    background: none;
+    color: #24332b;
+    border-radius: 16px;
+}
+
+.panel-strip:hover {
+    background: #eef3ef;
+}
+
+.strip-label {
+    writing-mode: vertical-rl;
+    font-weight: bold;
+}
+
+/* Leiste zum Ziehen der Breite, liegt im Abstand links neben der Spalte */
+.resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -15px;
+    width: 10px;
+    cursor: col-resize;
+    border-radius: 5px;
+}
+
+.resize-handle:hover,
+body.resizing .resize-handle {
+    background: #dde8df;
+}
+
+/* während dem Ziehen keinen Text markieren */
+body.resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* Always at home */
+.staple-list {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 8px;
+}
+
+.staple {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 0;
+    border-bottom: 1px solid #edf0ed;
+    font-size: 13px;
+    color: #24332b;
+}
+
+.staple span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* gleicher Button wie in der Pantry, nur etwas kleiner */
+.staple .icon-button {
+    padding: 3px 5px;
+    font-size: 16px;
+}
+
+form.staple-form {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 8px;
+}
+
+.staple-form input {
+    padding: 7px 10px;
+    font-size: 12px;
+}
+
+.staple-form button {
+    padding: 6px 12px;
+}
+
+/* Untertitel in den Spalten nicht nach oben schieben, sonst wird er abgeschnitten */
+.panel-body .pantry-subtitle {
+    margin-top: 0;
+}
+
+.panel-heading {
+    margin-bottom: 8px;
+}
+
+/* Chat ausgeblendet: Pantry und Profile teilen sich den Platz */
+.layout.chat-hidden .side-column {
+    flex-grow: 1;
+}
+
+/* Schalter in der Kopfzeile */
+nav {
+    gap: 8px;
+}
+
+.nav-toggle {
+    padding: 7px 12px;
+    background: none;
+    color: #24332b;
+    font-weight: bold;
+}
+
+.nav-toggle:hover {
+    background: #eef3ef;
+}
+
+.nav-toggle.off {
+    opacity: 0.4;
+}
+
+/* dezenter Button zum Leeren des Vorrats */
+.clear-button {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    background: white;
+    border: 1px solid #d8dfda;
+    color: #78847c;
+    font-size: 12px;
+}
+
+.clear-button:hover {
+    background: #fdf3f2;
+    border-color: #e3b5b0;
+    color: #c0392b;
+}
+
+.clear-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.clear-button:disabled:hover {
+    background: white;
+    border-color: #d8dfda;
+    color: #78847c;
+}
+
+/* unteres Fenster (Always at home): feste Höhe, die per Leiste geändert wird */
+.side-panel-bottom {
+    flex: 0 0 auto;
+}
+
+.side-panel-bottom.bottom-collapsed .panel-heading {
+    margin-bottom: 0;
+}
+
+/* Leiste zwischen Pantry und Always at home zum Ändern der Höhe */
+.height-handle {
+    flex: 0 0 10px;
+    margin: 5px 0;
+    cursor: row-resize;
+    border-radius: 5px;
+}
+
+.height-handle:hover,
+body.resizing-rows .height-handle {
+    background: #dde8df;
+}
+
+.height-handle.disabled,
+.height-handle.disabled:hover {
+    cursor: default;
+    background: none;
+}
+
+body.resizing-rows {
+    cursor: row-resize;
+    user-select: none;
+}
+
+/* kleine Bildschirme: alles untereinander, kein Ziehen */
+@media (max-width: 800px) {
+    .chat {
+        min-width: 0;
+    }
+
+    .side-column {
+        width: auto !important;
+        gap: 20px;
+    }
+
+    .side-panel-bottom {
+        height: auto !important;
+    }
+
+    .height-handle {
+        display: none;
+    }
+
+    .side-panel.collapsed {
+        width: auto !important;
+    }
+
+    .panel-strip {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .strip-label {
+        writing-mode: horizontal-tb;
+    }
+
+    .resize-handle {
+        display: none;
+    }
+}
