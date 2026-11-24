@@ -11,6 +11,9 @@ import ProfileIcon from './icons/ProfileIcon';
 import HomeIcon from './icons/HomeIcon';
 import BroccoliIcon from './icons/BroccoliIcon';
 import './icons/icons.css';
+import Login from './Login';
+import * as userService from './userService';
+import * as authService from './authService';
 
 
 const startIngredients = [
@@ -21,6 +24,23 @@ const startIngredients = [
     { id: 5, name: 'chicken breast', amount: 400, unit: 'g', selected: true },
     { id: 6, name: 'bell pepper', amount: 3, unit: 'pcs', selected: true }
 ];
+
+const ALLERGEN_CODES = {
+    1: 'gluten',
+    2: 'crustaceans',
+    3: 'eggs',
+    4: 'fish',
+    5: 'peanuts',
+    6: 'soy',
+    7: 'milk',
+    8: 'tree_nuts',
+    9: 'celery',
+    10: 'mustard',
+    11: 'sesame',
+    12: 'sulphites',
+    13: 'lupin',
+    14: 'molluscs'
+};
 
 // leeres Profil: kein Tagesziel, keine Einschränkung, keine Allergien
 const emptyProfile = {
@@ -60,27 +80,19 @@ function loadSaved(key, fallback) {
     }
 }
 
-function App() {
-    const [ingredients, setIngredients] = useState(() => {
-        try {
-            const saved = localStorage.getItem('mymakrochef-pantry');
-            return saved ? JSON.parse(saved) : startIngredients;
-        } catch {
-            return startIngredients;
-        }
-    });
+function MainApp({onLogout}) {
+    const [ingredients, setIngredients] = useState([]);
+    const [profile, setProfile] = useState(emptyProfile);
+    const [staples, setStaples] = useState([]);
 
-    // Profil wie der Vorrat im localStorage, damit es nach dem Neuladen noch da ist
-    const [profile, setProfile] = useState(() => {
-        try {
-            const saved = localStorage.getItem('mymakrochef-profile');
-            return saved ? { ...emptyProfile, ...JSON.parse(saved) } : emptyProfile;
-        } catch {
-            return emptyProfile;
-        }
-    });
+    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [dataError, setDataError] = useState('');
 
-    const [staples, setStaples] = useState(() => loadSaved('mymakrochef-staples', startStaples));
+    const [saveError, setSaveError] = useState('');
+    const profileSaveTimer = useRef(null);
+    const profileSaveQueue = useRef(Promise.resolve());
+    const pendingProfileSave = useRef(null);
+
     const [newStaple, setNewStaple] = useState('');
 
     const [layout, setLayout] = useState(() => ({
@@ -135,16 +147,145 @@ function App() {
         });
     }, [messages, isLoading]);
 
+    useEffect(() => {
 
+        let cancelled = false;
 
-    function updateIngredients(updated) {
-        setIngredients(updated);
-        localStorage.setItem('mymakrochef-pantry', JSON.stringify(updated));
+        async function loadUserData() {
+
+            setIsDataLoading(true);
+            setDataError('');
+
+            try {
+                const [
+                    savedProfile,
+                    savedPantry,
+                    savedStaples,
+                    savedAllergens
+                ] = await Promise.all([
+                    userService.getProfile(),
+                    userService.getPantry(),
+                    userService.getStaples(),
+                    userService.getAllergens()
+                ]);
+
+                if (cancelled) return;
+
+                setProfile({
+                    calories: savedProfile.calories ?? '',
+                    protein: savedProfile.protein ?? '',
+                    carbs: savedProfile.carbs ?? '',
+                    fat: savedProfile.fat ?? '',
+                    diet: savedProfile.diet ?? 'none',
+                    allergies: savedAllergens
+                        .map(id => ALLERGEN_CODES[id])
+                        .filter(Boolean)
+                });
+
+                setIngredients(savedPantry.map(item => ({
+                    id: item.id,
+                    name: item.ingredientName,
+                    amount: item.amount,
+                    unit: item.unit ?? 'g',
+                    selected: item.selected ?? true
+                })));
+
+                setStaples(savedStaples.map(
+                    item => item.ingredientName
+                ));
+
+            } catch (error) {
+                if (!cancelled) {
+                    setDataError(error.message);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsDataLoading(false);
+                }
+            }
+        }
+
+        loadUserData();
+
+        return () => {
+            cancelled = true;
+        };
+
+    }, []);
+
+    function toPantryItem(item) {
+        return {
+            ingredientName: item.name,
+            amount: item.amount === '' ? null : item.amount,
+            unit: item.unit,
+            selected: item.selected
+        };
     }
 
     function updateProfile(updated) {
+
         setProfile(updated);
-        localStorage.setItem('mymakrochef-profile', JSON.stringify(updated));
+        setSaveError('');
+
+        clearTimeout(profileSaveTimer.current);
+
+        pendingProfileSave.current = () => {
+
+            profileSaveQueue.current = profileSaveQueue.current
+                .catch(() => {})
+                .then(async () => {
+
+                    try {
+                        await userService.saveProfile( {
+                            calories: updated.calories === '' ? null : updated.calories,
+                            protein: updated.protein === '' ? null : updated.protein,
+                            carbs: updated.carbs === '' ? null : updated.carbs,
+                            fat: updated.fat === '' ? null : updated.fat,
+                            diet: updated.diet
+                        });
+
+                        const allergenIds = Object.entries(ALLERGEN_CODES)
+                            .filter(([id, code]) =>
+                                updated.allergies.includes(code)
+                            )
+                            .map(([id]) => Number(id));
+
+                        await userService.saveAllergens(
+                            allergenIds
+                        );
+
+                        setSaveError('');
+
+                    } catch (error) {
+                        setSaveError('Could not save your profile.');
+                        throw error;
+                    }
+                });
+
+            pendingProfileSave.current = null;
+        };
+
+        profileSaveTimer.current = setTimeout(() => {
+            pendingProfileSave.current?.();
+            profileSaveQueue.current.catch(() => {});
+        }, 600);
+    }
+
+    async function logoutWithSave() {
+
+        clearTimeout(profileSaveTimer.current);
+
+        pendingProfileSave.current?.();
+
+        try {
+            await profileSaveQueue.current;
+            await onLogout();
+
+        } catch (error) {
+            setSaveError(
+                'Could not save your changes. Please try again.'
+            );
+        }
     }
 
     function togglePanel(name) {
@@ -181,45 +322,84 @@ function App() {
         }));
     }
 
-    function updateStaples(updated) {
-        setStaples(updated);
-        localStorage.setItem('mymakrochef-staples', JSON.stringify(updated));
-    }
-
-    function addStaple(event) {
+    async function addStaple(event) {
         event.preventDefault();
 
         const name = newStaple.trim().toLowerCase();
 
-        if (name && !staples.includes(name)) {
-            updateStaples([...staples, name]);
-        }
+        if (!name || staples.includes(name)) return;
 
-        setNewStaple('');
+        try {
+            setSaveError('');
+
+            await userService.addStaple( {
+                ingredientName: name
+            });
+
+            setStaples(previous => [...previous, name]);
+            setNewStaple('');
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not add staple.');
+        }
     }
 
-    function removeStaple(name) {
-        updateStaples(staples.filter(item => item !== name));
+    async function removeStaple(name) {
+
+        try {
+            setSaveError('');
+
+            const savedStaples = await userService.getStaples(
+            );
+
+            const staple = savedStaples.find(
+                item => item.ingredientName === name
+            );
+
+            if (staple) {
+                await userService.deleteStaple(
+                    staple.id
+                );
+            }
+
+            setStaples(previous =>
+                previous.filter(item => item !== name)
+            );
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not delete staple.');
+        }
     }
 
     // leert nur den Vorrat, "Always at home" bleibt
-    function clearPantry() {
+    async function clearPantry() {
         if (ingredients.length === 0) return;
 
         if (window.confirm('Remove all ingredients from your pantry?')) {
-            updateIngredients([]);
+            try {
+                setSaveError('');
+
+                await userService.clearPantry();
+
+                setIngredients([]);
+
+            } catch (error) {
+                console.error(error);
+                setSaveError('Could not clear pantry.');
+            }
         }
     }
 
-    function addIngredient(event) {
+    async function addIngredient(event) {
         event.preventDefault();
 
         const name = newName.trim();
-
-        // leeres Mengenfeld bedeutet: genug da, gespeichert als null (keine Menge)
         const amount = newAmount === '' ? null : Number(newAmount);
 
-        if (!name || (amount !== null && (!Number.isFinite(amount) || amount <= 0))) {
+        if (!name || (amount !== null &&
+            (!Number.isFinite(amount) || amount <= 0))) {
             return;
         }
 
@@ -227,66 +407,147 @@ function App() {
             item => item.name.toLowerCase() === name.toLowerCase()
         );
 
-        // gleiche Zutat nochmal eingetragen: neue Menge und Einheit ersetzen die alte
-        if (existing) {
-            updateIngredients(ingredients.map(item =>
-                item.id === existing.id
-                    ? { ...item, amount, unit: newUnit, selected: true }
-                    : item
-            ));
-        } else {
-            updateIngredients([
-                ...ingredients,
-                {
-                    id: crypto.randomUUID(),
-                    name,
-                    amount,
-                    unit: newUnit,
-                    selected: true
-                }
-            ]);
-        }
+        try {
+            setSaveError('');
 
-        setNewName('');
-        setNewAmount('');
-        setNewUnit('g');
+            const item = {
+                name,
+                amount,
+                unit: newUnit,
+                selected: true
+            };
+
+            if (existing) {
+                const saved = await userService.updatePantryItem(
+                    existing.id,
+                    toPantryItem(item)
+                );
+
+                setIngredients(previous => previous.map(ingredient =>
+                    ingredient.id === existing.id
+                        ? { ...item, id: saved.id }
+                        : ingredient
+                ));
+
+            } else {
+                const saved = await userService.addPantryItem(
+                    toPantryItem(item)
+                );
+
+                setIngredients(previous => [
+                    ...previous,
+                    { ...item, id: saved.id }
+                ]);
+            }
+
+            setNewName('');
+            setNewAmount('');
+            setNewUnit('g');
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not add ingredient.');
+        }
     }
 
-    function toggleIngredient(id) {
-        updateIngredients(ingredients.map(item =>
-            item.id === id ? { ...item, selected: !item.selected } : item
-        ));
+    async function toggleIngredient(id) {
+
+        const item = ingredients.find(
+            ingredient => ingredient.id === id
+        );
+
+        if (!item) return;
+
+        const updated = {
+            ...item,
+            selected: !item.selected
+        };
+
+        try {
+            setSaveError('');
+
+            await userService.updatePantryItem(
+                id,
+                toPantryItem(updated)
+            );
+
+            setIngredients(previous => previous.map(ingredient =>
+                ingredient.id === id ? updated : ingredient
+            ));
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not update ingredient.');
+        }
     }
 
     function changeAmount(id, value) {
+
         const amount = Number(value);
 
-        updateIngredients(ingredients.map(item =>
+        setIngredients(previous => previous.map(item =>
             item.id === id
                 ? { ...item, amount: value === '' ? '' : amount }
                 : item
         ));
     }
 
-    function finishEditing(id) {
-        const item = ingredients.find(ingredient => ingredient.id === id);
+    async function finishEditing(id) {
 
-        // Feld geleert: genug da (null), ungültige Zahl: zurück auf 1
-        if (item && (item.amount === '' || item.amount === null)) {
-            updateIngredients(ingredients.map(ingredient =>
-                ingredient.id === id ? { ...ingredient, amount: null } : ingredient
-            ));
-        } else if (item && (!Number.isFinite(Number(item.amount)) || Number(item.amount) <= 0)) {
-            updateIngredients(ingredients.map(ingredient =>
-                ingredient.id === id ? { ...ingredient, amount: 1 } : ingredient
-            ));
+        const item = ingredients.find(
+            ingredient => ingredient.id === id
+        );
+
+        if (!item) return;
+
+        let amount = item.amount;
+
+        if (amount === '' || amount === null) {
+            amount = null;
+        } else if (!Number.isFinite(Number(amount)) ||
+            Number(amount) <= 0) {
+            amount = 1;
         }
 
-        setEditingId(null);
+        const updated = {
+            ...item,
+            amount
+        };
+
+        try {
+            setSaveError('');
+
+            await userService.updatePantryItem(
+                id,
+                toPantryItem(updated)
+            );
+
+            setIngredients(previous => previous.map(ingredient =>
+                ingredient.id === id ? updated : ingredient
+            ));
+
+            setEditingId(null);
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not save ingredient amount.');
+        }
     }
 
-    function deleteIngredient(id) {
-        updateIngredients(ingredients.filter(item => item.id !== id));
+    async function deleteIngredient(id) {
+        try {
+            setSaveError('');
+
+            await userService.deletePantryItem(id);
+
+            setIngredients(previous =>
+                previous.filter(item => item.id !== id)
+            );
+
+        } catch (error) {
+            console.error(error);
+            setSaveError('Could not delete ingredient.');
+        }
     }
 
 
@@ -380,6 +641,27 @@ function App() {
         </>
     );
 
+    if (isDataLoading) {
+        return (
+            <div className="login-page">
+                <p>Loading your personal data...</p>
+            </div>
+        );
+    }
+
+    if (dataError) {
+        return (
+            <div className="login-page">
+                <div className="login-card">
+                    <p>{dataError}</p>
+                    <button onClick={logoutWithSave}>
+                        Back to login
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={`app ${isTyping ? 'is-typing' : ''}`}>
             <header className="header">
@@ -397,8 +679,21 @@ function App() {
                             <item.Icon size={34} /> {item.label}
                         </button>
                     ))}
+                    <button
+                        type="button"
+                        className="logout-button"
+                        onClick={onLogout}
+                    >
+                        Log out
+                    </button>
                 </nav>
             </header>
+
+            {saveError && (
+                <p role="alert" style={{ color: '#c0392b', textAlign: 'center' }}>
+                    {saveError}
+                </p>
+            )}
 
             <main className={`layout ${layout.hidden.chat ? 'chat-hidden' : ''}`}>
                 {!layout.hidden.chat && (
@@ -560,9 +855,13 @@ function App() {
                                         <button
                                             type="button"
                                             className="icon-button"
-                                            onClick={() => setEditingId(
-                                                editingId === item.id ? null : item.id
-                                            )}
+                                            onClick={async () => {
+                                                if (editingId !== null) {
+                                                    await finishEditing(editingId);
+                                                } else {
+                                                    setEditingId(item.id);
+                                                }
+                                            }}
                                             aria-label={`Edit ${item.name}`}
                                             title="Edit amount"
                                         >
@@ -642,6 +941,71 @@ function App() {
                 )}
             </main>
         </div>
+    );
+}
+
+function App() {
+
+    const [authenticated, setAuthenticated] = useState(false);
+    const [checkingSession, setCheckingSession] = useState(true);
+    const [sessionError, setSessionError] = useState('');
+
+    useEffect(() => {
+
+        async function checkLogin() {
+            try {
+                const data = await authService.checkSession();
+
+                setAuthenticated(data.authenticated === true);
+
+            } catch (error) {
+                console.error(error);
+                setAuthenticated(false);
+
+            } finally {
+                setCheckingSession(false);
+            }
+        }
+
+        checkLogin();
+
+    }, []);
+
+    async function handleLogout() {
+        try {
+            setSessionError('');
+            await authService.logout();
+
+            setAuthenticated(false);
+
+        } catch (error) {
+            console.error(error);
+            setSessionError('Logout failed. Please try again.');
+        }
+    }
+
+    if (checkingSession) {
+        return (
+            <div className="login-page">
+                <p>Checking session...</p>
+            </div>
+        );
+    }
+
+    if (!authenticated) {
+        return <Login onLogin={setAuthenticated} />;
+    }
+
+    return (
+        <>
+            {sessionError && (
+                <p role="alert">{sessionError}</p>
+            )}
+
+            <MainApp
+                onLogout={handleLogout}
+            />
+        </>
     );
 }
 

@@ -870,3 +870,13 @@ body.resizing-rows {
         display: none;
     }
 }
+.logout-button {
+    background: white;
+    color: #087a3d;
+    border: 1px solid #d8dfda;
+    font-weight: bold;
+}
+
+.logout-button:hover {
+    background: #eef3ef;
+}
