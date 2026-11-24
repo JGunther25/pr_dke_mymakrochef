@@ -1,0 +1,182 @@
+/* Alle Icon-Animationen. Sie laufen nur in bestimmten Momenten:
+   - Pantry, Profile, Home: beim Darüberfahren über Überschrift, Streifen oder Schalter oben
+   - Chat: solange der Nutzer tippt (Klasse is-typing an .app)
+   - Logo: beim Laden und beim Darüberfahren (Klasse is-playing an .logo) */
+
+.mmc-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex: none;
+    overflow: visible;
+}
+
+/* Elemente, die sich um ihre eigene Mitte drehen oder skalieren */
+.mmc-bite, .mmc-mo, .mmc-mc, .mmc-chk, .mmc-eye, .mmc-dot {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.mmc-leg1, .mmc-leg2 {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+}
+
+.mmc-door {
+    transform-box: fill-box;
+    transform-origin: 0 50%;
+}
+
+/* Ruhezustand: offener Mund, Rauch und Person mit Taschen sind unsichtbar */
+.mmc-mo, .mmc-smoke, .mmc-walker {
+    opacity: 0;
+}
+
+/* Logo-Mund ist in Ruhe geschlossen */
+.mmc-mouth {
+    transform: scaleY(0);
+}
+
+/* ---------- Pantry: Essen fällt in den Korb ---------- */
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-drop {
+    animation-duration: 6s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d0 { animation-name: mmc-d0; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d1 { animation-name: mmc-d1; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d2 { animation-name: mmc-d2; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d3 { animation-name: mmc-d3; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d4 { animation-name: mmc-d4; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d5 { animation-name: mmc-d5; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d6 { animation-name: mmc-d6; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d7 { animation-name: mmc-d7; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d8 { animation-name: mmc-d8; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d9 { animation-name: mmc-d9; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-pantry .mmc-d10 { animation-name: mmc-d10; }
+
+/* jedes Teil startet 6 % später: von oben hineinfallen, kurz hüpfen, liegen bleiben, am Ende ausblenden */
+@keyframes mmc-d0 { 0% { transform: translateY(-70px); opacity: 0 } 1% { opacity: 1 } 8% { transform: translateY(0) } 10% { transform: translateY(-4px) } 12%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d1 { 0%, 6% { transform: translateY(-70px); opacity: 0 } 7% { opacity: 1 } 14% { transform: translateY(0) } 16% { transform: translateY(-4px) } 18%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d2 { 0%, 12% { transform: translateY(-70px); opacity: 0 } 13% { opacity: 1 } 20% { transform: translateY(0) } 22% { transform: translateY(-4px) } 24%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d3 { 0%, 18% { transform: translateY(-70px); opacity: 0 } 19% { opacity: 1 } 26% { transform: translateY(0) } 28% { transform: translateY(-4px) } 30%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d4 { 0%, 24% { transform: translateY(-70px); opacity: 0 } 25% { opacity: 1 } 32% { transform: translateY(0) } 34% { transform: translateY(-4px) } 36%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d5 { 0%, 30% { transform: translateY(-70px); opacity: 0 } 31% { opacity: 1 } 38% { transform: translateY(0) } 40% { transform: translateY(-4px) } 42%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d6 { 0%, 36% { transform: translateY(-70px); opacity: 0 } 37% { opacity: 1 } 44% { transform: translateY(0) } 46% { transform: translateY(-4px) } 48%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d7 { 0%, 42% { transform: translateY(-70px); opacity: 0 } 43% { opacity: 1 } 50% { transform: translateY(0) } 52% { transform: translateY(-4px) } 54%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d8 { 0%, 48% { transform: translateY(-70px); opacity: 0 } 49% { opacity: 1 } 56% { transform: translateY(0) } 58% { transform: translateY(-4px) } 60%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d9 { 0%, 54% { transform: translateY(-70px); opacity: 0 } 55% { opacity: 1 } 62% { transform: translateY(0) } 64% { transform: translateY(-4px) } 66%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+@keyframes mmc-d10 { 0%, 60% { transform: translateY(-70px); opacity: 0 } 61% { opacity: 1 } 68% { transform: translateY(0) } 70% { transform: translateY(-4px) } 72%, 85% { transform: translateY(0); opacity: 1 } 90%, 100% { transform: translateY(0); opacity: 0 } }
+
+/* ---------- Profile: Koch isst eine Tomate ---------- */
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-hand { animation: mmc-hand 4.5s ease-in-out infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-bite { animation: mmc-bite 4.5s ease-in infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-mo { animation: mmc-mo 4.5s infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-mc { animation: mmc-mc 4.5s infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-chk { animation: mmc-chk 4.5s infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-profile .mmc-eye { animation: mmc-eye 4.5s infinite; }
+
+@keyframes mmc-hand { 0%, 8% { transform: translate(0, 0) } 18% { transform: translate(-1px, -9px) } 27%, 35% { transform: translate(-6px, -14.5px) } 44% { transform: translate(-2px, -7px) } 54%, 100% { transform: translate(0, 0) } }
+@keyframes mmc-bite { 0%, 29% { opacity: 1; transform: scale(1) } 35% { opacity: 0; transform: scale(.25) } 92% { opacity: 0; transform: scale(1) } 96%, 100% { opacity: 1; transform: scale(1) } }
+@keyframes mmc-mo { 0%, 15% { opacity: 0; transform: scale(.4) } 21%, 34% { opacity: 1; transform: scale(1) } 38%, 100% { opacity: 0; transform: scale(.4) } }
+@keyframes mmc-mc { 0%, 16% { opacity: 1; transform: scaleY(1) } 20%, 35% { opacity: 0 } 38% { opacity: 1; transform: scaleY(1) } 46% { transform: scaleY(.45) } 53% { transform: scaleY(1) } 60% { transform: scaleY(.45) } 67% { transform: scaleY(1) } 74% { transform: scaleY(.45) } 81%, 100% { transform: scaleY(1); opacity: 1 } }
+@keyframes mmc-chk { 0%, 38%, 53%, 67%, 81%, 100% { transform: scale(1) } 46%, 60%, 74% { transform: scale(1.28) } }
+@keyframes mmc-eye { 0%, 38%, 82%, 100% { transform: scaleY(1) } 42%, 78% { transform: scaleY(.35) } }
+
+/* ---------- Home: jemand mit Einkaufstaschen geht ins Haus ---------- */
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-walker { animation: mmc-walk 7s linear infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-bob { animation: mmc-bob .3s ease-in-out infinite alternate; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-leg1 { animation: mmc-leg .3s ease-in-out infinite alternate; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-leg2 { animation: mmc-leg .3s ease-in-out infinite alternate-reverse; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-door { animation: mmc-door 7s ease-in-out infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-smoke { animation: mmc-smoke 2.4s ease-out infinite; }
+:is(.panel-heading, .panel-strip, .nav-toggle):hover .mmc-home .mmc-smoke2 { animation-delay: 1.2s; }
+
+@keyframes mmc-walk { 0% { transform: translateX(0); opacity: 0 } 5% { opacity: 1 } 48% { transform: translateX(44px); opacity: 1 } 56% { transform: translateX(46px) scale(.85); opacity: 0 } 100% { transform: translateX(46px); opacity: 0 } }
+@keyframes mmc-bob { from { transform: translateY(0) } to { transform: translateY(-1.2px) } }
+@keyframes mmc-leg { from { transform: rotate(20deg) } to { transform: rotate(-20deg) } }
+@keyframes mmc-door { 0%, 38% { transform: scaleX(1) } 44%, 58% { transform: scaleX(.15) } 64%, 100% { transform: scaleX(1) } }
+@keyframes mmc-smoke { 0% { transform: translateY(0) scale(.8); opacity: 0 } 20% { opacity: .85 } 100% { transform: translateY(-16px) scale(1.3); opacity: 0 } }
+
+/* ---------- Chat: Punkte tippen, solange der Nutzer schreibt ---------- */
+.is-typing .mmc-chat .mmc-dot { animation: mmc-dot 1.2s ease-in-out infinite; }
+.is-typing .mmc-chat .mmc-dt2 { animation-delay: .15s; }
+.is-typing .mmc-chat .mmc-dt3 { animation-delay: .3s; }
+
+@keyframes mmc-dot { 0%, 60%, 100% { transform: translateY(0) } 30% { transform: translateY(-5px) } }
+
+/* ---------- Brokkoli: denkt nach und zwinkert ---------- */
+.mmc-sway {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+}
+
+.mmc-wink, .mmc-smile, .mmc-think1, .mmc-think2, .mmc-think3 {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+/* nachdenken: wiegen, nach oben schauen, Denkblasen nacheinander */
+.mmc-broccoli--thinking .mmc-sway { animation: mmc-sway 3s ease-in-out infinite; }
+.mmc-broccoli--thinking .mmc-pupil { transform: translate(1.2px, -1.6px); }
+.mmc-broccoli--thinking .mmc-think1 { animation: mmc-think1 2.4s infinite; }
+.mmc-broccoli--thinking .mmc-think2 { animation: mmc-think2 2.4s infinite; }
+.mmc-broccoli--thinking .mmc-think3 { animation: mmc-think3 2.4s infinite; }
+
+@keyframes mmc-sway { 0%, 100% { transform: rotate(0) } 25% { transform: rotate(-3deg) } 75% { transform: rotate(3deg) } }
+@keyframes mmc-think1 { 0% { opacity: 0; transform: scale(.3) } 12%, 80% { opacity: 1; transform: scale(1) } 95%, 100% { opacity: 0; transform: scale(.3) } }
+@keyframes mmc-think2 { 0%, 15% { opacity: 0; transform: scale(.3) } 27%, 80% { opacity: 1; transform: scale(1) } 95%, 100% { opacity: 0; transform: scale(.3) } }
+@keyframes mmc-think3 { 0%, 30% { opacity: 0; transform: scale(.3) } 42%, 80% { opacity: 1; transform: scale(1) } 95%, 100% { opacity: 0; transform: scale(.3) } }
+
+/* zwinkern: einmal, kurz bevor die Antwort kommt */
+.mmc-broccoli--wink .mmc-wink { animation: mmc-wink .7s ease-in-out both; }
+.mmc-broccoli--wink .mmc-smile { animation: mmc-smile .7s ease-in-out both; }
+.mmc-broccoli--wink .mmc-sway { animation: mmc-tilt .7s ease-in-out both; }
+
+@keyframes mmc-wink { 0%, 100% { transform: scaleY(1) } 25%, 75% { transform: scaleY(.12) } }
+@keyframes mmc-smile { 0%, 100% { transform: scale(1) } 25%, 75% { transform: scale(1.2) } }
+@keyframes mmc-tilt { 0%, 100% { transform: rotate(0) } 25%, 75% { transform: rotate(-5deg) } }
+
+/* ---------- Logo: Salatschüssel frisst den Namen ---------- */
+.logo {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+}
+
+.logo-bowl {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+}
+
+.logo-text {
+    white-space: pre;
+}
+
+.logo-letter {
+    display: inline-block;
+    color: #24332b;
+}
+
+.logo-letter.green {
+    color: #16834a;
+}
+
+/* --travel (Strecke in px) wird in Logo.jsx gemessen */
+.logo.is-playing .logo-bowl { animation: mmc-pac 3.4s linear; }
+.logo.is-playing .mmc-mouth { animation: mmc-chomp .38s ease-in-out infinite alternate; }
+.logo.is-playing .logo-letter { animation: mmc-letter 1.6s both; }
+
+@keyframes mmc-pac { 0% { transform: translateX(0); opacity: 1 } 70% { transform: translateX(var(--travel)); opacity: 1 } 78% { transform: translateX(var(--travel)); opacity: 0 } 79% { transform: translateX(0); opacity: 0 } 100% { transform: translateX(0); opacity: 1 } }
+@keyframes mmc-chomp { from { transform: scaleY(.04) } to { transform: scaleY(1) } }
+@keyframes mmc-letter { 0% { opacity: 1; transform: scale(1) } 6% { opacity: 0; transform: scale(.2) } 60% { opacity: 0; transform: scale(.2) } 80% { opacity: 1; transform: scale(1.15) } 100% { opacity: 1; transform: scale(1) } }
+
+/* Wer am Computer "Bewegung reduzieren" eingestellt hat, sieht alles still */
+@media (prefers-reduced-motion: reduce) {
+    .mmc-icon *, .logo, .logo * {
+        animation: none !important;
+    }
+}
