@@ -12,7 +12,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Lädt die aufbereiteten Rezepte aus der JSON-Datei von RecipePreparer in Supabase (Schema rezeptplaner).
@@ -20,7 +22,7 @@ import java.util.List;
  * Ein Rezept, das es schon gibt, wird zuerst gelöscht und dann neu geschrieben. Der Import kann
  * also beliebig oft laufen. Alles passiert in einer Transaktion: Geht etwas schief, wird nichts gespeichert.
  * <p>
- * Programmargument: {@code <recipes_sample.json>}, Umgebungsvariablen: DB_URL, DB_USER, DB_PASSWORD
+ * Programmargument: {@code <recipes.json>}, Umgebungsvariablen: DB_URL, DB_USER, DB_PASSWORD
  */
 public class RecipeImporter {
 
@@ -29,9 +31,13 @@ public class RecipeImporter {
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .build();
 
+    // Schon bekannte ids, damit die Datenbank nicht für jeden Namen erneut gefragt wird
+    private static final Map<String, Integer> ingredientIds = new HashMap<>();
+    private static final Map<String, Integer> tagIds = new HashMap<>();
+
     public static void main(String[] args) throws SQLException {
         if (args.length != 1) {
-            System.err.println("Aufruf: RecipeImporter <recipes_sample.json>");
+            System.err.println("Aufruf: RecipeImporter <recipes.json>");
             System.exit(1);
         }
         List<Recipe> recipes = JSON.readValue(new File(args[0]), new TypeReference<List<Recipe>>() {});
@@ -41,8 +47,11 @@ public class RecipeImporter {
                 requireEnv("DB_URL"), requireEnv("DB_USER"), requireEnv("DB_PASSWORD"))) {
             connection.setAutoCommit(false);
             try {
-                for (Recipe recipe : recipes) {
-                    importRecipe(connection, recipe);
+                for (int i = 0; i < recipes.size(); i++) {
+                    importRecipe(connection, recipes.get(i));
+                    if ((i + 1) % 100 == 0) {
+                        System.out.println((i + 1) + " von " + recipes.size() + " Rezepten geschrieben");
+                    }
                 }
                 connection.commit();
             } catch (SQLException e) {
@@ -95,8 +104,10 @@ public class RecipeImporter {
                 insert.setLong(1, id);
                 insert.setInt(2, i + 1);
                 insert.setString(3, recipe.steps().get(i));
-                insert.executeUpdate();
+                insert.addBatch();
             }
+            // Alle gesammelten Schritte gehen gemeinsam an die Datenbank statt einzeln
+            insert.executeBatch();
         }
 
         // Zutatenname und Originalzeile mit Menge gehören über die Position zusammen
@@ -105,10 +116,11 @@ public class RecipeImporter {
             for (int i = 0; i < recipe.ingredients().size(); i++) {
                 insert.setLong(1, id);
                 insert.setInt(2, i + 1);
-                insert.setInt(3, findOrCreate(connection, "ingredient", recipe.ingredients().get(i)));
+                insert.setInt(3, findOrCreate(connection, "ingredient", recipe.ingredients().get(i), ingredientIds));
                 insert.setString(4, recipe.ingredientsRaw().get(i));
-                insert.executeUpdate();
+                insert.addBatch();
             }
+            insert.executeBatch();
         }
 
         // on conflict do nothing: falls ein Tag im Rezept doppelt vorkommt
@@ -116,9 +128,10 @@ public class RecipeImporter {
                 "insert into rezeptplaner.recipe_tag (recipe_id, tag_id) values (?, ?) on conflict do nothing")) {
             for (String tag : recipe.tags()) {
                 insert.setLong(1, id);
-                insert.setInt(2, findOrCreate(connection, "tag", tag));
-                insert.executeUpdate();
+                insert.setInt(2, findOrCreate(connection, "tag", tag, tagIds));
+                insert.addBatch();
             }
+            insert.executeBatch();
         }
     }
 
@@ -126,8 +139,15 @@ public class RecipeImporter {
      * Legt einen Namen in ingredient oder tag an, falls es ihn noch nicht gibt, und liefert seine id.
      * {@code table} kommt nur aus diesem Code ("ingredient" oder "tag"), nie von außen,
      * deshalb darf er direkt ins SQL.
+     * <p>
+     * Schon bekannte Namen stehen in {@code knownIds}, dann wird die Datenbank gar nicht erst gefragt.
      */
-    private static int findOrCreate(Connection connection, String table, String name) throws SQLException {
+    private static int findOrCreate(Connection connection, String table, String name,
+                                    Map<String, Integer> knownIds) throws SQLException {
+        Integer known = knownIds.get(name);
+        if (known != null) {
+            return known;
+        }
         try (PreparedStatement insert = connection.prepareStatement(
                 "insert into rezeptplaner." + table + " (name) values (?) on conflict (name) do nothing")) {
             insert.setString(1, name);
@@ -138,7 +158,9 @@ public class RecipeImporter {
             select.setString(1, name);
             try (ResultSet result = select.executeQuery()) {
                 result.next();
-                return result.getInt(1);
+                int id = result.getInt(1);
+                knownIds.put(name, id);
+                return id;
             }
         }
     }

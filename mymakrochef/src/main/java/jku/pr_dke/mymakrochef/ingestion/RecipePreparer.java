@@ -17,10 +17,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Bereitet die Food.com-Rezepte für den Import in Supabase vor.
@@ -34,8 +36,17 @@ import java.util.Random;
  */
 public class RecipePreparer {
 
+    // Mögliche weitere Regeln, noch nicht umgesetzt (Stand 24.11.2026):
+    // - Gewicht pro Portion über 1.000 g (steht in serving_size, z. B. "1 (1558 g)"): Meist ist dann das
+    //   ganze Blech als eine Portion eingetragen. Betrifft 112 der 2.000 Rezepte. Die kcal gelten dabei mal
+    //   für das ganze Blech (Salted Nut Squares: 7.659 kcal), mal für ein Stück (Gail's Christmas Cookies:
+    //   22 kcal bei 2.222 g).
+    // - Mehr als 2.000 kcal pro Portion: betrifft 39 der 2.000 Rezepte, nur 20 davon auch über 1.000 g.
+    // - Bewusst keine Regel über kcal pro Gramm: Suppen und Getränke haben von Natur aus sehr wenig.
+    // Neue Regeln ändern die Stichprobe. Danach also die Tabellen leeren und neu importieren.
+
     // Auswahlregeln für die erste Stichprobe
-    private static final int SAMPLE_SIZE = 20;
+    private static final int SAMPLE_SIZE = 2000;
     private static final long RANDOM_SEED = 42;
     private static final int MIN_STEPS = 3;
     private static final int MAX_STEPS = 15;
@@ -43,6 +54,9 @@ public class RecipePreparer {
     private static final int MAX_MINUTES = 180;
     private static final int MIN_SERVINGS = 1;
     private static final int MAX_SERVINGS = 12;
+    // Die Kalorien aus Fett·9 + Eiweiß·4 + Kohlenhydrate·4 dürfen höchstens 30 % vom angegebenen Wert abweichen
+    private static final double MIN_KCAL_RATIO = 0.7;
+    private static final double MAX_KCAL_RATIO = 1.3;
 
     // US-Tagesreferenzwerte (FDA) vor 2016, auf denen die PDV-Angaben von Food.com vermutlich beruhen:
     // Mit diesen Werten lassen sich die Kalorien aus Fett, Kohlenhydraten und Eiweiß am besten nachrechnen.
@@ -72,6 +86,9 @@ public class RecipePreparer {
     /** Die Felder aus RAW_recipes.csv, die wir brauchen. */
     private record RawRecipe(int minutes, long contributorId, String submitted, List<Double> nutrition,
                              List<String> ingredientNames) {}
+
+    /** Name und Zutaten eines Rezepts. Zwei Rezepte mit gleichem Schlüssel gelten als Duplikat. */
+    private record DuplicateKey(String name, List<String> ingredients) {}
 
     /**
      * Ein aufbereitetes Rezept, so wie es in der JSON-Datei landet.
@@ -159,6 +176,7 @@ public class RecipePreparer {
     private static List<Recipe> readCandidates(Path path, Map<Long, RawRecipe> rawRecipes,
                                                Map<String, Integer> rejected) throws IOException {
         List<Recipe> candidates = new ArrayList<>();
+        Set<DuplicateKey> seen = new HashSet<>();
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
              CSVParser parser = CSV_FORMAT.parse(reader)) {
             for (CSVRecord record : parser) {
@@ -216,14 +234,36 @@ public class RecipePreparer {
 
                 // Reihenfolge laut Datensatz: kcal, Fett, Zucker, Natrium, Eiweiß, gesättigte Fettsäuren, Kohlenhydrate
                 List<Double> n = raw.nutrition();
+                double calories = n.get(0);
+                double fatG = fromPdv(n.get(1), DAILY_FAT_G);
+                double carbohydratesG = fromPdv(n.get(6), DAILY_CARBOHYDRATES_G);
+                double proteinG = fromPdv(n.get(4), DAILY_PROTEIN_G);
+
+                if (calories <= 0) {
+                    reject(rejected, "keine Kalorien angegeben");
+                    continue;
+                }
+                double kcalRatio = (fatG * 9 + proteinG * 4 + carbohydratesG * 4) / calories;
+                if (kcalRatio < MIN_KCAL_RATIO || kcalRatio > MAX_KCAL_RATIO) {
+                    reject(rejected, "Kalorien passen nicht zu Fett, Eiweiß und Kohlenhydraten");
+                    continue;
+                }
+
+                // Groß-/Kleinschreibung und Reihenfolge der Zutaten spielen keine Rolle
+                List<String> sortedIngredients = ingredients.stream().map(String::toLowerCase).sorted().toList();
+                if (!seen.add(new DuplicateKey(name.toLowerCase(), sortedIngredients))) {
+                    reject(rejected, "Duplikat (gleicher Name und gleiche Zutaten)");
+                    continue;
+                }
+
                 candidates.add(new Recipe(
                         id, name, clean(record.get("description")), raw.minutes(), servings,
                         clean(record.get("serving_size")), ingredients, ingredientsRaw, steps, tags,
-                        n.get(0),
-                        fromPdv(n.get(1), DAILY_FAT_G),
+                        calories,
+                        fatG,
                         fromPdv(n.get(5), DAILY_SATURATED_FAT_G),
-                        fromPdv(n.get(6), DAILY_CARBOHYDRATES_G),
-                        fromPdv(n.get(4), DAILY_PROTEIN_G),
+                        carbohydratesG,
+                        proteinG,
                         fromPdv(n.get(3), DAILY_SODIUM_MG),
                         fromPdv(n.get(2), DAILY_SUGAR_G),
                         "food.com", raw.contributorId(), raw.submitted()));
