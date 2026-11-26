@@ -117,7 +117,81 @@ class ChatFilteringApiTest {
         verifyNoInteractions(repository, client, traces);
     }
 
-    private static Recipe recipe(long id, String diet, Double calories, Integer minutes) {
+    @Test
+    void emptyDatabaseReturnsNoMatchWithoutCallingModel() throws Exception {
+        when(repository.findAll()).thenReturn(List.of());
+        expectNoMatch("{\"message\":\"rice\",\"pantry\":[]}", "sufficiently relevant");
+    }
+
+    @Test
+    void weakCandidateIsNotRecommended() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(recipe(1, "vegan", 400.0, 30)));
+        expectNoMatch("{\"message\":\"rice chicken onion\",\"pantry\":[]}", "sufficiently relevant");
+    }
+
+    @Test
+    void substringMatchIsNotRecommended() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(recipe(1, "vegan", 400.0, 30, "graham flour")));
+        expectNoMatch("{\"message\":\"ham\",\"pantry\":[]}", "sufficiently relevant");
+    }
+
+    @Test
+    void pantryDoesNotRescueUnrelatedExplicitSearch() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(recipe(1, "vegan", 400.0, 30)));
+        expectNoMatch("""
+                {"message":"salmon", "pantry":[{"name":"rice","selected":true}]}
+                """, "sufficiently relevant");
+    }
+
+    @Test
+    void emptySearchExplainsHowToSearchWithoutDatabaseOrModelCall() throws Exception {
+        expectNoMatch("{\"message\":\"What can I cook?\",\"pantry\":[]}", "ingredients to search for");
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void pantryIsUsedWhenMessageContainsNoSearchTerms() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(recipe(1, "vegan", 400.0, 30)));
+        mvc.perform(post("/api/chat").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"message":"What can I cook?", "pantry":[{"name":"rice","selected":true}]}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipes[0].id").value(1));
+    }
+
+    @Test
+    void relevantRecipeWithWrongDietIsNotReplacedByWeakAllowedRecipe() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(
+                recipe(1, "vegetarian", 400.0, 30, "rice", "chicken", "onion"),
+                recipe(2, "vegan", 400.0, 30, "rice")));
+        expectNoMatch("""
+                {"message":"rice chicken onion","pantry":[],"filters":{"diet":"VEGAN"}}
+                """, "meets all your filters");
+    }
+
+    @Test
+    void belowThresholdCandidatesAreRemovedWhileRelevantRecipesRemain() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(
+                recipe(1, "vegan", 400.0, 30, "rice"),
+                recipe(2, "vegan", 400.0, 30, "rice", "chicken")));
+        mvc.perform(post("/api/chat").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"rice chicken onion\",\"pantry\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipes.length()").value(1))
+                .andExpect(jsonPath("$.recipes[0].id").value(2));
+    }
+
+    private void expectNoMatch(String body, String replyFragment) throws Exception {
+        mvc.perform(post("/api/chat").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipes").isEmpty())
+                .andExpect(jsonPath("$.reply").value(org.hamcrest.Matchers.containsString(replyFragment)));
+        verifyNoInteractions(client);
+        verify(traces).write(argThat(trace -> !trace.geminiCalled() && trace.hits().isEmpty()
+                && trace.reply().contains(replyFragment)));
+    }
+
+    private static Recipe recipe(long id, String diet, Double calories, Integer minutes, String... names) {
         Recipe recipe = new Recipe();
         ReflectionTestUtils.setField(recipe, "id", id);
         ReflectionTestUtils.setField(recipe, "name", "Rice bowl " + id);
@@ -131,12 +205,14 @@ class ChatFilteringApiTest {
             ReflectionTestUtils.setField(tag, "name", diet);
             recipe.getTags().add(tag);
         }
-        Ingredient ingredient = new Ingredient();
-        ReflectionTestUtils.setField(ingredient, "name", "rice");
-        RecipeIngredient line = new RecipeIngredient();
-        ReflectionTestUtils.setField(line, "ingredient", ingredient);
-        ReflectionTestUtils.setField(line, "rawText", "100 g rice");
-        recipe.getIngredients().add(line);
+        for (String name : names.length == 0 ? new String[]{"rice"} : names) {
+            Ingredient ingredient = new Ingredient();
+            ReflectionTestUtils.setField(ingredient, "name", name);
+            RecipeIngredient line = new RecipeIngredient();
+            ReflectionTestUtils.setField(line, "ingredient", ingredient);
+            ReflectionTestUtils.setField(line, "rawText", "100 g " + name);
+            recipe.getIngredients().add(line);
+        }
         return recipe;
     }
 }

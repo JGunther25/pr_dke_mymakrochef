@@ -7,7 +7,49 @@ Petra (`petrahudkova`) ist für folgende GitHub-Issues zuständig:
 | #10 / US-09 | Harte Filter | Nährwertgrenzen, Ernährungsform und Zeitlimit implementiert; Allergene offen |
 | #11 / US-10 | Hybride Suche | Offen; benötigt Embeddings und Indizes aus #6 |
 | #12 / US-11 | Reranking | Offen |
-| #13 / US-12 | Keine passenden Treffer | Bestehende leere Antwort bleibt erhalten; Relevanzschwelle offen |
+| #13 / US-12 | Keine passenden Treffer | Mindestabdeckung, feste Antworten und Tests für leere bzw. ausgeschlossene Treffer umgesetzt |
+
+## Keine passenden Treffer (#13 / US-12)
+
+Die Änderungen liegen auf `feature/13-no-matching-recipes`. Dieser Branch baut auf
+`feature/10-hard-recipe-filters` auf, damit die Filterprüfung zusammen mit dem Verhalten
+ohne Treffer getestet werden kann. Ein PR für #13 kann zunächst #10 als Zielbranch
+verwenden. Ein direkter Merge nach `main` würde auch die Änderungen von #10 enthalten
+und ist vorerst nicht vorgesehen.
+
+Die aktuelle Wortsuche verlangt mindestens **60 % Suchbegriff-Abdeckung**:
+Anzahl der unterschiedlichen passenden Suchbegriffe geteilt durch die Anzahl aller
+Suchbegriffe. Jeder Begriff zählt nur einmal; mehrfach vorkommende Zutaten erhöhen
+die Abdeckung nicht. Bei einer einzigen gesuchten Zutat reicht ein exakter Worttreffer.
+Bei `rice chicken onion` reicht `rice` allein nicht, `rice` plus `chicken` hingegen schon.
+Die Grenze ist eine vorläufige Heuristik und muss mit dem Golden Dataset evaluiert
+und bei der Einführung der hybriden Suche neu abgestimmt werden.
+
+Die Prüfung verwendet ganze Wörter bzw. zusammenhängende Wortgruppen in den
+Zutatennamen. `ham` passt deshalb nicht auf `graham flour`. Groß-/Kleinschreibung wird
+ignoriert; Übersetzungen, Synonyme und Singular-/Pluralformen werden nicht aufgelöst.
+Die Nachricht wird wie bisher in Wörter zerlegt und um Füllwörter bereinigt.
+
+Enthält die Nachricht Suchbegriffe, bestimmen diese die Relevanz. Vorratszutaten können
+eine unpassende konkrete Anfrage nicht zu einem Treffer machen. Enthält die Nachricht
+keine Suchbegriffe, dienen die ausgewählten Vorratszutaten als Suchbegriffe.
+
+Leere Ergebnisse erhalten eine feste englische Antwort für einen von drei Fällen:
+
+- Keine Suchbegriffe: Zutaten eingeben oder Vorratszutaten auswählen.
+- Keine ausreichend relevanten Rezepte: keine passende Empfehlung gefunden.
+- Relevante Rezepte vorhanden, aber alle durch harte Filter ausgeschlossen:
+  kein Rezept erfüllt alle Filter; Einschränkungen wurden nicht gelockert.
+
+In diesen Fällen gibt es keine Rezeptkarten und keinen Modellaufruf. Der Trace enthält
+die verwendeten Suchbegriffe, die feste Antwort, leere Treffer und `geminiCalled=false`.
+Bei Treffern bedeutet der Trace-Score jetzt die Anzahl passender Suchbegriffe.
+Die Prüfung der Relevanz und aller Filter erfolgt vor dem Ergebnislimit.
+
+Verbindliche Einschränkungen werden weiterhin über die strukturierten Filter übergeben.
+Die Ableitung von Einschränkungen aus Freitext und der noch fehlende Allergenfilter
+werden durch #13 nicht ergänzt. AC-12.5 ist für die bereits unterstützten Filter getestet;
+die Prüfung mit echten Allergendaten folgt nach deren Integration in #10.
 
 ## Strukturierte Filter für `/api/chat`
 
@@ -48,7 +90,7 @@ aus Freitext und die Eingabe im Frontend sind noch nicht angebunden.
 
 ## Offene Abhängigkeiten
 
-Dieser Branch bleibt vorerst getrennt von `main`. Issue #10 ist noch nicht vollständig
+Die Änderungen zu #10 bleiben vorerst getrennt von `main`. Issue #10 ist noch nicht vollständig
 umgesetzt und soll durch einen späteren Pull Request nicht automatisch geschlossen werden.
 
 Vor der Implementierung von AC-09.1 muss mit Kerstin der Datenvertrag geklärt werden:
@@ -79,7 +121,7 @@ die Datenbanksuche folgt mit #11; die verbindlichen Filter müssen dort erhalten
 Im Backend-Verzeichnis:
 
 ```sh
-mvn -Dtest=RecipeHardFilterTest,ChatFilteringApiTest test
+mvn -Dtest=RecipeHardFilterTest,RecipeRelevanceTest,ChatFilteringApiTest test
 ```
 
 Die Tests benötigen weder Datenbank noch Gemini. Sie prüfen Grenzen, unbekannte Werte,
@@ -89,5 +131,10 @@ den HTTP-Vertrag einschließlich HTTP 400 bei ungültigen Filtern. Sie verwenden
 Controller und ChatService mit kontrollierten Rezeptdaten. Ein Test mit echter Datenbank
 und ein vollständiger End-to-End-Test bleiben noch aus.
 
-Letzter lokaler Lauf: **23 Tests bestanden**, keine Fehler oder übersprungenen Tests
-(14 Filter-/Service-Tests und 9 API-Testfälle).
+Die zusätzlichen Tests für #13 prüfen die 60-%-Grenze, Teilwort-Fehlmatches,
+mehrfach vorkommende Zutaten, leere Suchanfragen, den Vorrats-Fallback und den
+Vorrang konkreter Suchanfragen. Bei abgelehnten Treffern prüfen sie auch, dass
+kein Modell aufgerufen wird und der Trace zur Antwort passt.
+
+Letzter lokaler Lauf: **40 Tests bestanden**, keine Fehler oder übersprungenen Tests
+(14 Filter-/Service-Tests, 9 Relevanz-Testfälle und 17 API-Testfälle).
