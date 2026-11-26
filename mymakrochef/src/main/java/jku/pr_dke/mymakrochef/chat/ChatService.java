@@ -10,6 +10,7 @@ import jku.pr_dke.mymakrochef.recipe.RecipeFilters;
 import jku.pr_dke.mymakrochef.recipe.RecipeHardFilter;
 import jku.pr_dke.mymakrochef.recipe.RecipeIngredient;
 import jku.pr_dke.mymakrochef.recipe.RecipeRepository;
+import jku.pr_dke.mymakrochef.recipe.RecipeRelevance;
 import jku.pr_dke.mymakrochef.recipe.RecipeStep;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,7 +41,8 @@ public class ChatService {
     private static final Set<String> STOP_WORDS = Set.of(
             "with", "something", "what", "can", "make", "cook", "have", "some", "the", "and",
             "for", "recipe", "recipes", "want", "please", "need", "dish", "meal", "using", "from",
-            "that", "this", "about", "any", "give", "show", "find", "like", "would", "could");
+            "that", "this", "about", "any", "give", "show", "find", "like", "would", "could",
+            "how", "looking", "today", "tonight", "use", "recommend", "suggest", "suggestion");
 
     // Die Rezeptkarten mit Zutaten und Nährwerten zeigt das Frontend selbst an,
     // die KI soll deshalb nur kurz empfehlen und begründen, nicht alles wiederholen.
@@ -56,8 +59,14 @@ public class ChatService {
             - Write 2 to 4 warm, natural sentences. No lists, no headings, no markdown.
             - Always answer in English.""";
 
-    private static final String NO_RECIPE_REPLY = "I couldn't find a matching recipe in the database. "
+    private static final String NO_RECIPE_REPLY = "I couldn't find a sufficiently relevant recipe in the database. "
             + "Tip: the recipes are in English, so please enter ingredients in English (e.g. salmon, cheese).";
+
+    private static final String NO_FILTER_MATCH_REPLY =
+            "I couldn't find a matching recipe that meets all your filters. Your restrictions have not been relaxed.";
+
+    private static final String NO_SEARCH_TERMS_REPLY =
+            "I couldn't find any ingredients to search for. Enter ingredients in English or select items from your pantry.";
 
     private static final String GEMINI_UNAVAILABLE_REPLY =
             "The AI is not available right now. These recipes from the database match your request:";
@@ -81,10 +90,12 @@ public class ChatService {
         long searchStart = System.nanoTime();
 
         Set<String> pantryWords = selectedPantryNames(request.pantry());
-        Set<String> searchWords = new LinkedHashSet<>(pantryWords);
-        searchWords.addAll(messageWords(request.message()));
+        // Ein gefüllter Vorrat darf eine unpassende konkrete Suchanfrage nicht überstimmen.
+        Set<String> messageWords = messageWords(request.message());
+        Set<String> searchWords = messageWords.isEmpty() ? pantryWords : messageWords;
 
-        List<Recipe> recipes = findRecipes(searchWords, request.filters());
+        SearchResult search = findRecipes(searchWords, request.filters());
+        List<Recipe> recipes = search.recipes();
         List<RecipeHit> hits = recipes.stream()
                 .map(recipe -> new RecipeHit(recipe.getId(), recipe.getName(), score(recipe, searchWords)))
                 .toList();
@@ -93,9 +104,9 @@ public class ChatService {
         if (recipes.isEmpty()) {
             // Grounding: lieber keine Antwort als eine erfundene, Gemini wird gar nicht gefragt
             traceWriter.write(new ChatTrace(timestamp, request.message(), new ArrayList<>(pantryWords),
-                    new ArrayList<>(searchWords), hits, false, null, null, null, NO_RECIPE_REPLY, null,
+                    new ArrayList<>(searchWords), hits, false, null, null, null, search.emptyReply(), null,
                     searchMillis, 0, null, null));
-            return new ChatResponse(NO_RECIPE_REPLY, List.of());
+            return new ChatResponse(search.emptyReply(), List.of());
         }
 
         GeminiResult gemini = askGemini(request.message(), pantryWords, recipes);
@@ -112,6 +123,8 @@ public class ChatService {
     private record GeminiResult(String reply, String userPrompt, String model, String error, long millis,
                                 Integer promptTokens, Integer completionTokens) {}
 
+    private record SearchResult(List<Recipe> recipes, String emptyReply) {}
+
     /** Die Namen der angehakten Vorratszutaten, klein geschrieben. */
     private Set<String> selectedPantryNames(List<PantryItem> pantry) {
         if (pantry == null) {
@@ -119,7 +132,7 @@ public class ChatService {
         }
         return pantry.stream()
                 .filter(PantryItem::selected)
-                .map(item -> item.name() == null ? "" : item.name().strip().toLowerCase())
+                .map(item -> item.name() == null ? "" : item.name().strip().toLowerCase(Locale.ROOT))
                 .filter(name -> !name.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
@@ -129,42 +142,39 @@ public class ChatService {
         if (message == null) {
             return Set.of();
         }
-        return java.util.Arrays.stream(message.toLowerCase().split("[^\\p{L}]+"))
+        return java.util.Arrays.stream(message.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
                 .filter(word -> word.length() >= 3)
                 .filter(word -> !STOP_WORDS.contains(word))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**
-     * Gibt jedem Rezept einen Punkt pro Zutat, deren Name eines der Suchwörter enthält,
-     * und liefert die besten Rezepte mit mindestens einem Punkt.
-     * Für die 20 Testrezepte werden alle Rezepte geladen; für viele Rezepte gehört die Suche in die Datenbank.
+     * Verwirft Rezepte unter der Mindestabdeckung und wendet alle harten Filter an.
+     * Kein Treffer führt zu einer festen Antwort, ohne Filter zu lockern oder Gemini aufzurufen.
+     * Lädt derzeit alle Rezepte (inzwischen rund 2.000) und prüft sie im Speicher. Mit der hybriden
+     * Suche (#11) wandert die Suche in die Datenbank.
      */
-    private List<Recipe> findRecipes(Set<String> searchWords, RecipeFilters filters) {
+    private SearchResult findRecipes(Set<String> searchWords, RecipeFilters filters) {
         if (searchWords.isEmpty()) {
-            return List.of();
+            return new SearchResult(List.of(), NO_SEARCH_TERMS_REPLY);
         }
-        return recipeRepository.findAll().stream()
+        List<Recipe> relevant = recipeRepository.findAll().stream()
+                .filter(recipe -> RecipeRelevance.isRelevant(recipe, searchWords))
+                .toList();
+        List<Recipe> recipes = relevant.stream()
                 .filter(recipe -> RecipeHardFilter.matches(recipe, filters))
-                .filter(recipe -> score(recipe, searchWords) > 0)
                 .sorted(Comparator.comparingInt((Recipe recipe) -> score(recipe, searchWords)).reversed())
                 .limit(MAX_RECIPES)
                 .toList();
+        return new SearchResult(recipes, relevant.isEmpty() ? NO_RECIPE_REPLY : NO_FILTER_MATCH_REPLY);
     }
 
     private int score(Recipe recipe, Set<String> searchWords) {
-        int score = 0;
-        for (RecipeIngredient ingredient : recipe.getIngredients()) {
-            if (matchesAny(ingredient.getIngredient().getName(), searchWords)) {
-                score++;
-            }
-        }
-        return score;
+        return RecipeRelevance.matchedTerms(recipe, searchWords);
     }
 
     private boolean matchesAny(String ingredientName, Set<String> words) {
-        String name = ingredientName.toLowerCase();
-        return words.stream().anyMatch(name::contains);
+        return words.stream().anyMatch(word -> RecipeRelevance.matches(ingredientName, word));
     }
 
     /** Lässt Gemini aus den gefundenen Rezepten eine kurze Antwort formulieren und misst die Dauer. */
