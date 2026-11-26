@@ -6,12 +6,14 @@ import jku.pr_dke.mymakrochef.chat.ChatController.PantryItem;
 import jku.pr_dke.mymakrochef.chat.ChatController.RecipeCard;
 import jku.pr_dke.mymakrochef.chat.ChatTrace.RecipeHit;
 import jku.pr_dke.mymakrochef.recipe.Recipe;
-import jku.pr_dke.mymakrochef.recipe.RecipeFilters;
-import jku.pr_dke.mymakrochef.recipe.RecipeHardFilter;
 import jku.pr_dke.mymakrochef.recipe.RecipeIngredient;
-import jku.pr_dke.mymakrochef.recipe.RecipeRepository;
 import jku.pr_dke.mymakrochef.recipe.RecipeRelevance;
 import jku.pr_dke.mymakrochef.recipe.RecipeStep;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalHit;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalOutcome;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalRequest;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalResult;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +21,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -28,21 +29,12 @@ import java.util.stream.Collectors;
 
 /**
  * Beantwortet eine Chat-Nachricht in drei Schritten:
- * 1. passende Rezepte in der Datenbank suchen (einfacher Wortvergleich, keine KI),
+ * 1. passende Rezepte über den RetrievalService suchen (einfacher Wortvergleich, keine KI),
  * 2. Gemini formuliert aus diesen Rezepten den Antworttext,
  * 3. die Rezepte als Karten für das Frontend aufbereiten.
  */
 @Service
 public class ChatService {
-
-    private static final int MAX_RECIPES = 3;
-
-    // Wörter aus der Nachricht, die bei der Suche ignoriert werden
-    private static final Set<String> STOP_WORDS = Set.of(
-            "with", "something", "what", "can", "make", "cook", "have", "some", "the", "and",
-            "for", "recipe", "recipes", "want", "please", "need", "dish", "meal", "using", "from",
-            "that", "this", "about", "any", "give", "show", "find", "like", "would", "could",
-            "how", "looking", "today", "tonight", "use", "recommend", "suggest", "suggestion");
 
     // Die Rezeptkarten mit Zutaten und Nährwerten zeigt das Frontend selbst an,
     // die KI soll deshalb nur kurz empfehlen und begründen, nicht alles wiederholen.
@@ -71,15 +63,15 @@ public class ChatService {
     private static final String GEMINI_UNAVAILABLE_REPLY =
             "The AI is not available right now. These recipes from the database match your request:";
 
-    private final RecipeRepository recipeRepository;
+    private final RetrievalService retrievalService;
     private final ChatClient chatClient;
     private final TraceWriter traceWriter;
     private final String model;
 
-    public ChatService(RecipeRepository recipeRepository, ChatClient.Builder chatClientBuilder,
+    public ChatService(RetrievalService retrievalService, ChatClient.Builder chatClientBuilder,
                        TraceWriter traceWriter,
                        @Value("${spring.ai.google.genai.chat.model:unbekannt}") String model) {
-        this.recipeRepository = recipeRepository;
+        this.retrievalService = retrievalService;
         this.chatClient = chatClientBuilder.build();
         this.traceWriter = traceWriter;
         this.model = model;
@@ -90,28 +82,26 @@ public class ChatService {
         long searchStart = System.nanoTime();
 
         Set<String> pantryWords = selectedPantryNames(request.pantry());
-        // Ein gefüllter Vorrat darf eine unpassende konkrete Suchanfrage nicht überstimmen.
-        Set<String> messageWords = messageWords(request.message());
-        Set<String> searchWords = messageWords.isEmpty() ? pantryWords : messageWords;
-
-        SearchResult search = findRecipes(searchWords, request.filters());
-        List<Recipe> recipes = search.recipes();
-        List<RecipeHit> hits = recipes.stream()
-                .map(recipe -> new RecipeHit(recipe.getId(), recipe.getName(), score(recipe, searchWords)))
+        RetrievalResult search = retrievalService.search(
+                new RetrievalRequest(request.message(), List.copyOf(pantryWords), request.filters()));
+        List<Recipe> recipes = search.hits().stream().map(RetrievalHit::recipe).toList();
+        List<RecipeHit> hits = search.hits().stream()
+                .map(hit -> new RecipeHit(hit.recipeId(), hit.recipe().getName(), hit.score()))
                 .toList();
         long searchMillis = millisSince(searchStart);
 
         if (recipes.isEmpty()) {
             // Grounding: lieber keine Antwort als eine erfundene, Gemini wird gar nicht gefragt
+            String reply = emptyReply(search.outcome());
             traceWriter.write(new ChatTrace(timestamp, request.message(), new ArrayList<>(pantryWords),
-                    new ArrayList<>(searchWords), hits, false, null, null, null, search.emptyReply(), null,
+                    new ArrayList<>(search.searchTerms()), hits, false, null, null, null, reply, null,
                     searchMillis, 0, null, null));
-            return new ChatResponse(search.emptyReply(), List.of());
+            return new ChatResponse(reply, List.of());
         }
 
         GeminiResult gemini = askGemini(request.message(), pantryWords, recipes);
         traceWriter.write(new ChatTrace(timestamp, request.message(), new ArrayList<>(pantryWords),
-                new ArrayList<>(searchWords), hits, true, SYSTEM_PROMPT, gemini.userPrompt(), gemini.model(),
+                new ArrayList<>(search.searchTerms()), hits, true, SYSTEM_PROMPT, gemini.userPrompt(), gemini.model(),
                 gemini.reply(), gemini.error(), searchMillis, gemini.millis(),
                 gemini.promptTokens(), gemini.completionTokens()));
 
@@ -123,7 +113,14 @@ public class ChatService {
     private record GeminiResult(String reply, String userPrompt, String model, String error, long millis,
                                 Integer promptTokens, Integer completionTokens) {}
 
-    private record SearchResult(List<Recipe> recipes, String emptyReply) {}
+    /** Feste Antwort für ein leeres Suchergebnis, je nach Grund. */
+    private static String emptyReply(RetrievalOutcome outcome) {
+        return switch (outcome) {
+            case NO_SEARCH_TERMS -> NO_SEARCH_TERMS_REPLY;
+            case FILTERS_EXCLUDED_ALL -> NO_FILTER_MATCH_REPLY;
+            case NOT_RELEVANT, FOUND -> NO_RECIPE_REPLY;
+        };
+    }
 
     /** Die Namen der angehakten Vorratszutaten, klein geschrieben. */
     private Set<String> selectedPantryNames(List<PantryItem> pantry) {
@@ -135,42 +132,6 @@ public class ChatService {
                 .map(item -> item.name() == null ? "" : item.name().strip().toLowerCase(Locale.ROOT))
                 .filter(name -> !name.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    /** Die Wörter der Nachricht ohne Füllwörter und ohne Wörter mit weniger als 3 Buchstaben. */
-    private Set<String> messageWords(String message) {
-        if (message == null) {
-            return Set.of();
-        }
-        return java.util.Arrays.stream(message.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
-                .filter(word -> word.length() >= 3)
-                .filter(word -> !STOP_WORDS.contains(word))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    /**
-     * Verwirft Rezepte unter der Mindestabdeckung und wendet alle harten Filter an.
-     * Kein Treffer führt zu einer festen Antwort, ohne Filter zu lockern oder Gemini aufzurufen.
-     * Lädt derzeit alle Rezepte (inzwischen rund 2.000) und prüft sie im Speicher. Mit der hybriden
-     * Suche (#11) wandert die Suche in die Datenbank.
-     */
-    private SearchResult findRecipes(Set<String> searchWords, RecipeFilters filters) {
-        if (searchWords.isEmpty()) {
-            return new SearchResult(List.of(), NO_SEARCH_TERMS_REPLY);
-        }
-        List<Recipe> relevant = recipeRepository.findAll().stream()
-                .filter(recipe -> RecipeRelevance.isRelevant(recipe, searchWords))
-                .toList();
-        List<Recipe> recipes = relevant.stream()
-                .filter(recipe -> RecipeHardFilter.matches(recipe, filters))
-                .sorted(Comparator.comparingInt((Recipe recipe) -> score(recipe, searchWords)).reversed())
-                .limit(MAX_RECIPES)
-                .toList();
-        return new SearchResult(recipes, relevant.isEmpty() ? NO_RECIPE_REPLY : NO_FILTER_MATCH_REPLY);
-    }
-
-    private int score(Recipe recipe, Set<String> searchWords) {
-        return RecipeRelevance.matchedTerms(recipe, searchWords);
     }
 
     private boolean matchesAny(String ingredientName, Set<String> words) {

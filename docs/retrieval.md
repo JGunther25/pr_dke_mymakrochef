@@ -51,6 +51,25 @@ Die Ableitung von Einschränkungen aus Freitext und der noch fehlende Allergenfi
 werden durch #13 nicht ergänzt. AC-12.5 ist für die bereits unterstützten Filter getestet;
 die Prüfung mit echten Allergendaten folgt nach deren Integration in #10.
 
+## Paket `retrieval`
+
+Die Suche liegt im Paket `jku.pr_dke.mymakrochef.retrieval` (Branch `feature/retrieval-service`).
+Der `ChatService` ruft sie nur noch auf; das Verhalten ist unverändert. Andere Komponenten,
+z. B. das Tool `rezept_suche` im Harness, können dieselbe Suche verwenden.
+
+- `RetrievalService.search(RetrievalRequest)`: Suchbegriffe bestimmen, Mindestabdeckung prüfen,
+  harte Filter anwenden, nach Anzahl passender Suchbegriffe sortieren, höchstens 3 Treffer.
+- `RetrievalRequest`: `query` (Nachricht), `pantry` (Namen der ausgewählten Vorratszutaten),
+  `filters` (`RecipeFilters`, optional).
+- `RetrievalResult`: `hits`, `outcome`, `searchTerms`.
+- `RetrievalHit`: `recipe` (mit `recipeId()`), `score`, `reason`, z. B.
+  `matches 2 of 3 search terms: rice, chicken`.
+- `RetrievalOutcome`: `FOUND`, `NO_SEARCH_TERMS`, `NOT_RELEVANT`, `FILTERS_EXCLUDED_ALL`.
+
+Die Suche liefert nur den Grund eines leeren Ergebnisses. Die englischen Antworttexte
+wählt weiterhin der `ChatService`. `score` ist vorläufig die Anzahl passender Suchbegriffe;
+das Reranking (#12) ersetzt ihn durch einen Gesamtscore.
+
 ## Strukturierte Filter für `/api/chat`
 
 ```json
@@ -121,7 +140,7 @@ die Datenbanksuche folgt mit #11; die verbindlichen Filter müssen dort erhalten
 Im Backend-Verzeichnis:
 
 ```sh
-mvn -Dtest=RecipeHardFilterTest,RecipeRelevanceTest,ChatFilteringApiTest test
+mvn -Dtest=RecipeHardFilterTest,RecipeRelevanceTest,RetrievalServiceTest,ChatFilteringApiTest test
 ```
 
 Die Tests benötigen weder Datenbank noch Gemini. Sie prüfen Grenzen, unbekannte Werte,
@@ -136,5 +155,8 @@ mehrfach vorkommende Zutaten, leere Suchanfragen, den Vorrats-Fallback und den
 Vorrang konkreter Suchanfragen. Bei abgelehnten Treffern prüfen sie auch, dass
 kein Modell aufgerufen wird und der Trace zur Antwort passt.
 
-Letzter lokaler Lauf: **40 Tests bestanden**, keine Fehler oder übersprungenen Tests
-(14 Filter-/Service-Tests, 9 Relevanz-Testfälle und 17 API-Testfälle).
+`RetrievalServiceTest` prüft die Suche direkt, ohne Controller und Gemini: alle vier
+Outcomes, Reihenfolge, Limit, Score und Begründung sowie den Vorrats-Fallback.
+
+Letzter lokaler Lauf: **46 Tests bestanden**, keine Fehler oder übersprungenen Tests
+(14 Filter-/Service-Tests, 9 Relevanz-Testfälle, 6 Retrieval-Tests und 17 API-Testfälle).

@@ -3,6 +3,7 @@ package jku.pr_dke.mymakrochef.recipe;
 import jku.pr_dke.mymakrochef.chat.ChatController.ChatRequest;
 import jku.pr_dke.mymakrochef.chat.ChatService;
 import jku.pr_dke.mymakrochef.chat.TraceWriter;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
@@ -127,7 +128,7 @@ class RecipeHardFilterTest {
         TraceWriter traces = mock(TraceWriter.class, withSettings().mockMaker(MockMakers.SUBCLASS));
         when(builder.build()).thenReturn(client);
         when(repository.findAll()).thenReturn(List.of(recipe()));
-        ChatService service = new ChatService(repository, builder, traces, "test");
+        ChatService service = new ChatService(new RetrievalService(repository), builder, traces, "test");
 
         var response = service.answer(new ChatRequest("rice", List.of(), filters(null, null, 10)));
 
@@ -149,7 +150,7 @@ class RecipeHardFilterTest {
         Recipe accepted = recipe();
         when(repository.findAll()).thenReturn(List.of(rejected, rejected, rejected, accepted));
 
-        var response = new ChatService(repository, builder, traces, "test")
+        var response = new ChatService(new RetrievalService(repository), builder, traces, "test")
                 .answer(new ChatRequest("rice", List.of(), filters(null, null, 30)));
 
         assertEquals(1, response.recipes().size());

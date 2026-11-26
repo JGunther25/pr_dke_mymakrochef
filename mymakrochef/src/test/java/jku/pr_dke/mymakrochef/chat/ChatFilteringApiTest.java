@@ -5,6 +5,7 @@ import jku.pr_dke.mymakrochef.recipe.Recipe;
 import jku.pr_dke.mymakrochef.recipe.RecipeIngredient;
 import jku.pr_dke.mymakrochef.recipe.RecipeRepository;
 import jku.pr_dke.mymakrochef.recipe.Tag;
+import jku.pr_dke.mymakrochef.retrieval.RetrievalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +39,7 @@ class ChatFilteringApiTest {
         when(builder.build()).thenReturn(client);
         when(client.prompt()).thenThrow(new IllegalStateException("Model disabled for API tests"));
         mvc = MockMvcBuilders.standaloneSetup(new ChatController(
-                new ChatService(repository, builder, traces, "test"))).build();
+                new ChatService(new RetrievalService(repository), builder, traces, "test"))).build();
     }
 
     @Test

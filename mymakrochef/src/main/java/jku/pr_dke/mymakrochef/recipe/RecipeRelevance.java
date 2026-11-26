@@ -1,5 +1,6 @@
 package jku.pr_dke.mymakrochef.recipe;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -12,9 +13,14 @@ public final class RecipeRelevance {
 
     /** Jeder Suchbegriff zählt höchstens einmal, auch bei mehrfach aufgeführten Zutaten. */
     public static int matchedTerms(Recipe recipe, Set<String> terms) {
-        return (int) terms.stream().filter(term -> recipe.getIngredients().stream()
+        return matchingTerms(recipe, terms).size();
+    }
+
+    /** Die Suchbegriffe, die in mindestens einer Zutat des Rezepts vorkommen, in der Reihenfolge der Suche. */
+    public static List<String> matchingTerms(Recipe recipe, Set<String> terms) {
+        return terms.stream().filter(term -> recipe.getIngredients().stream()
                 .filter(line -> line.getIngredient() != null)
-                .anyMatch(line -> matches(line.getIngredient().getName(), term))).count();
+                .anyMatch(line -> matches(line.getIngredient().getName(), term))).toList();
     }
 
     public static boolean isRelevant(Recipe recipe, Set<String> terms) {
