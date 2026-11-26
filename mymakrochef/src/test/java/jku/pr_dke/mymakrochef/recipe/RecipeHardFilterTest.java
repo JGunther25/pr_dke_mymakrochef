@@ -91,6 +91,36 @@ class RecipeHardFilterTest {
         assertTrue(RecipeHardFilter.matches(recipe, vegetarian));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"low sodium chicken broth", "beef stock", "anchovies", "fish sauce", "bacon"})
+    void meatOrFishExcludesWronglyTaggedRecipes(String ingredient) {
+        Recipe recipe = taggedRecipe("vegan", "rice", ingredient);
+        assertFalse(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGETARIAN, null, null)));
+        assertFalse(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGAN, null, null)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"butter", "eggs", "milk", "heavy cream", "parmesan cheese", "honey"})
+    void animalProductsExcludeVeganButNotVegetarian(String ingredient) {
+        Recipe recipe = taggedRecipe("vegan", "rice", ingredient);
+        assertFalse(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGAN, null, null)));
+        assertTrue(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGETARIAN, null, null)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"vegetarian bacon", "soy chorizo", "coconut milk", "peanut butter",
+            "cream of tartar", "eggplant", "butternut squash", "hamburger buns", "vegetable broth"})
+    void plantIngredientsWithSimilarNamesStayVegan(String ingredient) {
+        Recipe recipe = taggedRecipe("vegan", "rice", ingredient);
+        assertTrue(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGAN, null, null)));
+    }
+
+    @Test
+    void ingredientsDoNotReplaceMissingDietTag() {
+        Recipe recipe = taggedRecipe("easy", "rice", "beans");
+        assertFalse(RecipeHardFilter.matches(recipe, filters(RecipeFilters.Diet.VEGAN, null, null)));
+    }
+
     @Test
     void preparationTimeRequiresKnownNonNegativeValueWithinLimit() {
         Recipe recipe = recipe();
@@ -159,6 +189,22 @@ class RecipeHardFilterTest {
 
     private static RecipeFilters filters(RecipeFilters.Diet diet, RecipeFilters.Range calories, Integer minutes) {
         return new RecipeFilters(diet, calories, null, null, null, minutes);
+    }
+
+    private static Recipe taggedRecipe(String tagName, String... ingredientNames) {
+        Recipe recipe = recipe();
+        recipe.getIngredients().clear();
+        Tag tag = new Tag();
+        ReflectionTestUtils.setField(tag, "name", tagName);
+        recipe.getTags().add(tag);
+        for (String name : ingredientNames) {
+            Ingredient ingredient = new Ingredient();
+            ReflectionTestUtils.setField(ingredient, "name", name);
+            RecipeIngredient line = new RecipeIngredient();
+            ReflectionTestUtils.setField(line, "ingredient", ingredient);
+            recipe.getIngredients().add(line);
+        }
+        return recipe;
     }
 
     private static Recipe recipe() {

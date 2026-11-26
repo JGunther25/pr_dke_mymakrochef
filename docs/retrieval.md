@@ -27,7 +27,10 @@ und bei der Einführung der hybriden Suche neu abgestimmt werden.
 
 Die Prüfung verwendet ganze Wörter bzw. zusammenhängende Wortgruppen in den
 Zutatennamen. `ham` passt deshalb nicht auf `graham flour`. Groß-/Kleinschreibung wird
-ignoriert; Übersetzungen, Synonyme und Singular-/Pluralformen werden nicht aufgelöst.
+ignoriert. Einfache englische Plurale werden gleich behandelt (`egg` = `eggs`,
+`tomato` = `tomatoes`, `berry` = `berries`): Zutat und Suchbegriff werden dazu in Wörter
+zerlegt und auf eine gemeinsame Grundform gebracht. Unregelmäßige Plurale (`leaves`),
+Übersetzungen und Synonyme werden nicht aufgelöst.
 Die Nachricht wird wie bisher in Wörter zerlegt und um Füllwörter bereinigt.
 
 Enthält die Nachricht Suchbegriffe, bestimmen diese die Relevanz. Vorratszutaten können
@@ -95,8 +98,22 @@ bestätigt werden; der Filter rechnet sie nicht um.
 
 `diet` erlaubt `VEGETARIAN` oder `VEGAN`. Die Prüfung verwendet vorhandene
 Food.com-Tags: `vegan` erfüllt beide Anforderungen, `vegetarian` nur die vegetarische.
-Fehlt ein passendes Tag, wird das Rezept ausgeschlossen. Das ist eine Prüfung der
-Datensatzkennzeichnung, keine zusätzliche Verifikation der Zutaten.
+Fehlt ein passendes Tag, wird das Rezept ausgeschlossen.
+
+Die Tags sind nicht immer richtig: In der Datenbank enthalten z. B. als `vegetarian`
+getaggte Rezepte Hühnerbrühe und als `vegan` getaggte Rezepte Butter, Milch, Ei oder Honig.
+Deshalb werden zusätzlich die Zutaten geprüft:
+
+- Fleisch und Fisch (z. B. `chicken`, `beef`, `bacon`, `fish`, `anchovy`) schließen
+  vegetarische und vegane Rezepte aus, außer der Zutatenname kennzeichnet Ersatz
+  (`vegetarian bacon`, `soy chorizo`).
+- Tierische Produkte (z. B. `egg`, `milk`, `butter`, `cheese`, `cream`, `honey`) schließen
+  vegane Rezepte aus, außer der Name kennzeichnet ein Pflanzenprodukt (`coconut milk`,
+  `peanut butter`, `cream of tartar`).
+
+Die Wortlisten stehen in `RecipeHardFilter`. Die Prüfung ergänzt das Tag, ersetzt es aber
+nicht: Ohne Tag bleibt ein Rezept ausgeschlossen. Versteckte tierische Bestandteile, etwa
+Sardellen in `worcestershire sauce` oder Milch in Schokolade, erkennt sie nicht.
 
 Fehlen Werte für einen aktiven Nährwert- oder Zeitfilter, wird das Rezept ausgeschlossen.
 Negative oder nicht endliche Grenzwerte, vertauschte Unter-/Obergrenzen und negative
@@ -158,5 +175,9 @@ kein Modell aufgerufen wird und der Trace zur Antwort passt.
 `RetrievalServiceTest` prüft die Suche direkt, ohne Controller und Gemini: alle vier
 Outcomes, Reihenfolge, Limit, Score und Begründung sowie den Vorrats-Fallback.
 
-Letzter lokaler Lauf: **46 Tests bestanden**, keine Fehler oder übersprungenen Tests
-(14 Filter-/Service-Tests, 9 Relevanz-Testfälle, 6 Retrieval-Tests und 17 API-Testfälle).
+Die Tests für Zutatenprüfung und Plurale decken falsch getaggte Rezepte, pflanzliche
+Zutaten mit ähnlichem Namen (`eggplant`, `butternut squash`, `coconut milk`) und
+einfache Pluralformen ab.
+
+Letzter lokaler Lauf: **79 Tests bestanden**, keine Fehler oder übersprungenen Tests
+(35 Filter-/Service-Tests, 21 Relevanz-Testfälle, 6 Retrieval-Tests und 17 API-Testfälle).

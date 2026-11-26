@@ -23,6 +23,25 @@ class RecipeRelevanceTest {
         assertEquals(expected, RecipeRelevance.matches(ingredient, term));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "eggs, egg, true",
+            "egg, eggs, true",
+            "extra-large egg, eggs, true",
+            "tomatoes, tomato, true",
+            "peaches, peach, true",
+            "fresh berries, berry, true",
+            "cookies, cookie, true",
+            "turkey, turkeys, true",
+            "garlic cloves, garlic clove, true",
+            "cheese, cheeses, true",
+            "eggplant, egg, false",
+            "swiss cheese, swis, false"
+    })
+    void simplePluralsAreTreatedAsTheSameWord(String ingredient, String term, boolean expected) {
+        assertEquals(expected, RecipeRelevance.matches(ingredient, term));
+    }
+
     @Test
     void thresholdIncludesExactlySixtyPercentButRejectsWeakerMatches() {
         Recipe recipe = recipe("rice", "chicken", "onion");
