@@ -38,7 +38,7 @@ class RetrievalServiceTest {
         assertEquals(RetrievalOutcome.FOUND, result.outcome());
         assertEquals(List.of("rice", "chicken", "onion"), result.searchTerms());
         assertEquals(List.of(2L, 1L), result.hits().stream().map(RetrievalHit::recipeId).toList());
-        assertEquals(3, result.hits().get(0).score());
+        assertEquals(3, result.hits().get(0).matchedTerms());
         assertEquals("matches 3 of 3 search terms: rice, chicken, onion", result.hits().get(0).reason());
         assertEquals("matches 2 of 3 search terms: rice, onion", result.hits().get(1).reason());
     }
@@ -46,12 +46,53 @@ class RetrievalServiceTest {
     @Test
     void resultIsLimitedToMaxResults() {
         when(repository.findAll()).thenReturn(List.of(
-                recipe(1, "vegan", "rice"), recipe(2, "vegan", "rice"),
-                recipe(3, "vegan", "rice"), recipe(4, "vegan", "rice")));
+                recipe(1, "vegan", "rice"), recipe(2, "vegan", "rice"), recipe(3, "vegan", "rice"),
+                recipe(4, "vegan", "rice"), recipe(5, "vegan", "rice"), recipe(6, "vegan", "rice")));
 
         RetrievalResult result = service.search(new RetrievalRequest("rice", List.of(), null));
 
+        assertEquals(5, RetrievalService.MAX_RESULTS);
         assertEquals(RetrievalService.MAX_RESULTS, result.hits().size());
+    }
+
+    @Test
+    void pantryDecidesBetweenEquallyGoodQueryMatches() {
+        when(repository.findAll()).thenReturn(List.of(
+                recipe(1, "vegan", "rice", "beans", "corn"),
+                recipe(2, "vegan", "rice", "onion")));
+
+        RetrievalResult result = service.search(new RetrievalRequest("rice", List.of("rice", "onion"), null));
+
+        assertEquals(List.of(2L, 1L), result.hits().stream().map(RetrievalHit::recipeId).toList());
+        assertTrue(result.hits().get(0).reason().contains("you have 2 of 2 ingredients"));
+    }
+
+    @Test
+    void budgetDecidesBetweenOtherwiseEqualRecipes() {
+        Recipe heavy = recipe(1, "vegan", "rice");
+        ReflectionTestUtils.setField(heavy, "calories", 1200.0);
+        Recipe light = recipe(2, "vegan", "rice");
+        ReflectionTestUtils.setField(light, "calories", 500.0);
+        when(repository.findAll()).thenReturn(List.of(heavy, light));
+
+        RetrievalResult result = service.search(new RetrievalRequest("rice", List.of(), null,
+                new MacroBudget(600.0, null, null, null)));
+
+        assertEquals(List.of(2L, 1L), result.hits().stream().map(RetrievalHit::recipeId).toList());
+        assertTrue(result.hits().get(1).reason().contains("exceeds your remaining calories"));
+    }
+
+    @Test
+    void bestScoredRecipeCannotPassAHardFilter() {
+        // Rezept 1 hätte den besten Score (alle Zutaten im Vorrat), ist aber nur vegetarisch
+        when(repository.findAll()).thenReturn(List.of(
+                recipe(1, "vegetarian", "rice", "onion"),
+                recipe(2, "vegan", "rice", "beans", "corn", "lime")));
+        RecipeFilters vegan = new RecipeFilters(RecipeFilters.Diet.VEGAN, null, null, null, null, null);
+
+        RetrievalResult result = service.search(new RetrievalRequest("rice", List.of("rice", "onion"), vegan));
+
+        assertEquals(List.of(2L), result.hits().stream().map(RetrievalHit::recipeId).toList());
     }
 
     @Test

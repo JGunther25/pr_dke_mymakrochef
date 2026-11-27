@@ -7,7 +7,6 @@ import jku.pr_dke.mymakrochef.recipe.RecipeRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -18,13 +17,14 @@ import java.util.stream.Collectors;
  * Sucht passende Rezepte in drei Schritten:
  * 1. Suchbegriffe bestimmen (aus der Nachricht, sonst aus dem Vorrat),
  * 2. Rezepte unter der Mindestabdeckung verwerfen und alle harten Filter anwenden,
- * 3. nach Anzahl passender Suchbegriffe sortieren und begrenzen.
+ * 3. die übrigen mit dem {@link RecipeReranker} bewerten, sortieren und begrenzen.
+ * Bewertet wird erst nach den Filtern, deshalb kann der Score keinen Filter aufheben.
  * Filter werden nie gelockert; ein leeres Ergebnis wird über {@link RetrievalOutcome} begründet.
  */
 @Service
 public class RetrievalService {
 
-    static final int MAX_RESULTS = 3;
+    static final int MAX_RESULTS = 5;
 
     // Wörter aus der Nachricht, die bei der Suche ignoriert werden
     private static final Set<String> STOP_WORDS = Set.of(
@@ -46,7 +46,8 @@ public class RetrievalService {
     public RetrievalResult search(RetrievalRequest request) {
         // Ein gefüllter Vorrat darf eine unpassende konkrete Suchanfrage nicht überstimmen.
         Set<String> messageTerms = messageTerms(request.query());
-        Set<String> terms = messageTerms.isEmpty() ? pantryTerms(request.pantry()) : messageTerms;
+        Set<String> pantry = pantryTerms(request.pantry());
+        Set<String> terms = messageTerms.isEmpty() ? pantry : messageTerms;
         if (terms.isEmpty()) {
             return new RetrievalResult(List.of(), RetrievalOutcome.NO_SEARCH_TERMS, List.of());
         }
@@ -54,10 +55,10 @@ public class RetrievalService {
         List<Recipe> relevant = recipeRepository.findAll().stream()
                 .filter(recipe -> RecipeRelevance.isRelevant(recipe, terms))
                 .toList();
-        List<RetrievalHit> hits = relevant.stream()
+        List<Recipe> allowed = relevant.stream()
                 .filter(recipe -> RecipeHardFilter.matches(recipe, request.filters()))
-                .map(recipe -> toHit(recipe, terms))
-                .sorted(Comparator.comparingInt(RetrievalHit::score).reversed())
+                .toList();
+        List<RetrievalHit> hits = RecipeReranker.rank(allowed, terms, pantry, request.budget()).stream()
                 .limit(MAX_RESULTS)
                 .toList();
 
@@ -70,13 +71,6 @@ public class RetrievalService {
             outcome = RetrievalOutcome.FILTERS_EXCLUDED_ALL;
         }
         return new RetrievalResult(hits, outcome, List.copyOf(terms));
-    }
-
-    private static RetrievalHit toHit(Recipe recipe, Set<String> terms) {
-        List<String> matching = RecipeRelevance.matchingTerms(recipe, terms);
-        String reason = "matches " + matching.size() + " of " + terms.size() + " search terms: "
-                + String.join(", ", matching);
-        return new RetrievalHit(recipe, matching.size(), reason);
     }
 
     /** Die Wörter der Nachricht ohne Füllwörter und ohne Wörter mit weniger als 3 Buchstaben. */

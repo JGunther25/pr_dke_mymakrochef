@@ -6,7 +6,7 @@ Petra (`petrahudkova`) ist für folgende GitHub-Issues zuständig:
 | --- | --- | --- |
 | #10 / US-09 | Harte Filter | Nährwertgrenzen, Ernährungsform und Zeitlimit implementiert; Allergene offen |
 | #11 / US-10 | Hybride Suche | Offen; benötigt Embeddings und Indizes aus #6 |
-| #12 / US-11 | Reranking | Offen |
+| #12 / US-11 | Reranking | Gesamtscore aus Anfrage, Vorrat und Budget umgesetzt; Budget wird vom Chat noch nicht übergeben |
 | #13 / US-12 | Keine passenden Treffer | Mindestabdeckung, feste Antworten und Tests für leere bzw. ausgeschlossene Treffer umgesetzt |
 
 ## Keine passenden Treffer (#13 / US-12)
@@ -61,17 +61,47 @@ Der `ChatService` ruft sie nur noch auf; das Verhalten ist unverändert. Andere 
 z. B. das Tool `rezept_suche` im Harness, können dieselbe Suche verwenden.
 
 - `RetrievalService.search(RetrievalRequest)`: Suchbegriffe bestimmen, Mindestabdeckung prüfen,
-  harte Filter anwenden, nach Anzahl passender Suchbegriffe sortieren, höchstens 3 Treffer.
+  harte Filter anwenden, mit dem `RecipeReranker` bewerten, höchstens 5 Treffer.
 - `RetrievalRequest`: `query` (Nachricht), `pantry` (Namen der ausgewählten Vorratszutaten),
-  `filters` (`RecipeFilters`, optional).
+  `filters` (`RecipeFilters`, optional), `budget` (`MacroBudget`, optional).
 - `RetrievalResult`: `hits`, `outcome`, `searchTerms`.
-- `RetrievalHit`: `recipe` (mit `recipeId()`), `score`, `reason`, z. B.
-  `matches 2 of 3 search terms: rice, chicken`.
+- `RetrievalHit`: `recipe` (mit `recipeId()`), `score` (0 bis 1), `matchedTerms`, `reason`.
 - `RetrievalOutcome`: `FOUND`, `NO_SEARCH_TERMS`, `NOT_RELEVANT`, `FILTERS_EXCLUDED_ALL`.
 
 Die Suche liefert nur den Grund eines leeren Ergebnisses. Die englischen Antworttexte
-wählt weiterhin der `ChatService`. `score` ist vorläufig die Anzahl passender Suchbegriffe;
-das Reranking (#12) ersetzt ihn durch einen Gesamtscore.
+wählt weiterhin der `ChatService`. Der Chat zeigt die besten 3 Treffer als Karten und schickt
+nur diese an Gemini; der Trace enthält alle Treffer der Suche mit `matchedTerms` als Score.
+
+## Reranking (#12 / US-11)
+
+Rezepte, die Mindestabdeckung und harte Filter bestanden haben, bewertet der `RecipeReranker`.
+Weil erst nach den Filtern bewertet wird, kann der Score keinen Filter aufheben (AC-11.4).
+
+**Score = (0,5 × Anfrage + 0,3 × Vorrat + 0,2 × Budget) / Summe der verwendeten Gewichte**
+
+| Teilnote | Berechnung (0 bis 1) |
+| --- | --- |
+| Anfrage | passende Suchbegriffe / alle Suchbegriffe |
+| Vorrat | Rezeptzutaten im Vorrat / alle Rezeptzutaten; Zutaten nur aus Salz, Pfeffer, Wasser und beschreibenden Wörtern (`fresh ground black pepper`, `boiling water`) zählen nicht |
+| Budget | Durchschnitt über die Werte mit Budget: 1, wenn das Rezept passt, sonst `1 − Überschreitung / Budget`, mindestens 0; fehlender Rezeptwert = 0 |
+
+Ist kein Vorrat bzw. kein Budget angegeben oder hat ein Rezept nur Salz, Pfeffer und Wasser,
+fällt die Teilnote weg und wird nicht als 0 gezählt. Bei gleichem Score bleibt die Reihenfolge
+der Kandidaten erhalten. Beispiel: Anfrage 2/2, Vorrat 2 von 3, Budget passt
+→ (0,5 × 1 + 0,3 × 2/3 + 0,2 × 1) / 1,0 = 0,9.
+
+Jeder Treffer enthält eine Begründung, z. B.
+`matches 2 of 2 search terms: rice, chicken; you have 2 of 3 ingredients; fits your remaining budget`.
+
+Offene Punkte:
+
+- Die Gewichte sind ein Startwert und werden mit dem Golden Dataset (US-17) überprüft.
+- Der Vorrat kann eine vollständig passende Anfrage überholen, wenn ein anderes relevantes
+  Rezept fast ganz aus dem Vorrat kochbar ist.
+- Eiweiß wird wie die anderen Werte behandelt; eine Überschreitung senkt die Note, obwohl
+  mehr Eiweiß oft unproblematisch ist.
+- Der Chat übergibt noch kein Budget, weil Profil und Tagesbudget nicht an `/api/chat`
+  geschickt werden. Bis dahin zählen nur Anfrage und Vorrat.
 
 ## Strukturierte Filter für `/api/chat`
 
@@ -157,7 +187,7 @@ die Datenbanksuche folgt mit #11; die verbindlichen Filter müssen dort erhalten
 Im Backend-Verzeichnis:
 
 ```sh
-mvn -Dtest=RecipeHardFilterTest,RecipeRelevanceTest,RetrievalServiceTest,ChatFilteringApiTest test
+mvn -Dtest=RecipeHardFilterTest,RecipeRelevanceTest,RecipeRerankerTest,RetrievalServiceTest,ChatFilteringApiTest test
 ```
 
 Die Tests benötigen weder Datenbank noch Gemini. Sie prüfen Grenzen, unbekannte Werte,
@@ -179,5 +209,11 @@ Die Tests für Zutatenprüfung und Plurale decken falsch getaggte Rezepte, pflan
 Zutaten mit ähnlichem Namen (`eggplant`, `butternut squash`, `coconut milk`) und
 einfache Pluralformen ab.
 
-Letzter lokaler Lauf: **79 Tests bestanden**, keine Fehler oder übersprungenen Tests
-(35 Filter-/Service-Tests, 21 Relevanz-Testfälle, 6 Retrieval-Tests und 17 API-Testfälle).
+`RecipeRerankerTest` prüft die Formel mit von Hand nachgerechneten Werten, weggelassene
+Teilnoten, Budgetüberschreitung, das Ignorieren von Salz, Pfeffer und Wasser sowie die
+Reihenfolge. `RetrievalServiceTest` prüft zusätzlich, dass Vorrat und Budget die Reihenfolge
+beeinflussen, aber kein Rezept mit hohem Score einen harten Filter umgehen kann.
+
+Letzter lokaler Lauf: **101 Tests bestanden**, keine Fehler oder übersprungenen Tests
+(35 Filter-/Service-Tests, 21 Relevanz-Testfälle, 18 Reranking-Tests, 9 Retrieval-Tests
+und 18 API-Testfälle).

@@ -36,6 +36,10 @@ import java.util.stream.Collectors;
 @Service
 public class ChatService {
 
+    // Die Suche liefert bis zu 5 Treffer; der Chat zeigt die besten 3 als Karten und schickt nur diese an Gemini,
+    // passend zum Prompt ("up to three recipes"). Der Trace enthält alle Treffer der Suche.
+    private static final int MAX_CHAT_RECIPES = 3;
+
     // Die Rezeptkarten mit Zutaten und Nährwerten zeigt das Frontend selbst an,
     // die KI soll deshalb nur kurz empfehlen und begründen, nicht alles wiederholen.
     private static final String SYSTEM_PROMPT = """
@@ -84,9 +88,9 @@ public class ChatService {
         Set<String> pantryWords = selectedPantryNames(request.pantry());
         RetrievalResult search = retrievalService.search(
                 new RetrievalRequest(request.message(), List.copyOf(pantryWords), request.filters()));
-        List<Recipe> recipes = search.hits().stream().map(RetrievalHit::recipe).toList();
+        List<Recipe> recipes = search.hits().stream().map(RetrievalHit::recipe).limit(MAX_CHAT_RECIPES).toList();
         List<RecipeHit> hits = search.hits().stream()
-                .map(hit -> new RecipeHit(hit.recipeId(), hit.recipe().getName(), hit.score()))
+                .map(hit -> new RecipeHit(hit.recipeId(), hit.recipe().getName(), hit.matchedTerms()))
                 .toList();
         long searchMillis = millisSince(searchStart);
 

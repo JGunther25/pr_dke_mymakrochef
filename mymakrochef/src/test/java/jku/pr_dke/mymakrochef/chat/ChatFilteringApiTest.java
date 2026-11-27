@@ -54,6 +54,18 @@ class ChatFilteringApiTest {
     }
 
     @Test
+    void chatShowsBestThreeRecipesButTracesAllSearchHits() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(
+                recipe(1, "vegan", 400.0, 30), recipe(2, "vegan", 400.0, 30), recipe(3, "vegan", 400.0, 30),
+                recipe(4, "vegan", 400.0, 30), recipe(5, "vegan", 400.0, 30), recipe(6, "vegan", 400.0, 30)));
+        mvc.perform(post("/api/chat").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"rice\",\"pantry\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipes.length()").value(3));
+        verify(traces).write(argThat(trace -> trace.hits().size() == 5));
+    }
+
+    @Test
     void combinedFiltersReturnOnlyMatchingRecipesIncludingBoundaryValues() throws Exception {
         when(repository.findAll()).thenReturn(List.of(
                 recipe(1, "vegan", 500.0, 30),
